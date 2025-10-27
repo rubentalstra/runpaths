@@ -81,10 +81,10 @@ export function CitySearch({ onCitySelect, isVisible }: CitySearchProps) {
 							type="submit"
 							disabled={isSearching || !query.trim()}
 							className={cn(
-								"px-4 py-2 rounded-md transition-colors",
+								"px-4 py-2 rounded-md transition-colors font-semibold shadow-sm",
 								isSearching || !query.trim()
 									? "bg-neutral-300 text-neutral-500 cursor-not-allowed"
-									: "bg-brand text-white hover:bg-brand-accent",
+									: "bg-brand-accent text-brand-dark hover:bg-[#c79438]",
 							)}
 							aria-label="Search for city"
 						>

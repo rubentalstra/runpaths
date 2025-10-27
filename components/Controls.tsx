@@ -65,10 +65,10 @@ export function Controls({
 							type="button"
 							onClick={() => setKms(k)}
 							className={cn(
-								"px-3 py-1 rounded-full border text-sm transition-colors",
+								"px-3 py-1 rounded-full border text-sm transition-colors font-semibold",
 								kms === k
-									? "bg-brand-accent text-white border-brand-accent"
-									: "border-neutral-300 hover:bg-neutral-100",
+									? "bg-brand-accent text-brand-dark border-brand-accent shadow-sm"
+									: "bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-50 hover:border-neutral-400",
 							)}
 							aria-label={`Set distance to ${k} kilometers`}
 						>
@@ -134,10 +134,10 @@ export function Controls({
 				onClick={onFindRoutes}
 				disabled={isPending}
 				className={cn(
-					"w-full rounded-xl py-3 transition-colors font-medium",
+					"w-full rounded-xl py-3 transition-colors font-bold shadow-md",
 					isPending
 						? "bg-neutral-300 text-neutral-500 cursor-not-allowed"
-						: "bg-brand text-white hover:bg-brand-dark",
+						: "bg-blue-500 text-white hover:bg-blue-600 active:scale-[0.98]",
 				)}
 				aria-label="Find running routes"
 			>

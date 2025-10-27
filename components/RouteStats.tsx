@@ -51,10 +51,10 @@ export function RouteStats({
 							type="button"
 							onClick={() => onSelectRoute(idx)}
 							className={clsx(
-								"px-3 py-1 rounded-lg border text-sm transition-colors",
+								"px-3 py-1 rounded-lg border text-sm transition-colors font-semibold",
 								routes[activeRoute ?? 0]?.id === r.id
-									? "bg-brand-accent text-white border-brand-accent"
-									: "border-neutral-300 hover:bg-neutral-100",
+									? "bg-brand-accent text-brand-dark border-brand-accent shadow-sm"
+									: "bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-50 hover:border-neutral-400",
 							)}
 							aria-label={`Select route ${idx + 1}`}
 						>
