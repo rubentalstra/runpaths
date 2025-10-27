@@ -9,12 +9,14 @@ interface RouteStatsProps {
 	readonly routes: readonly RouteSummary[];
 	readonly activeRoute: number | null;
 	readonly onSelectRoute: (index: number) => void;
+	readonly paceMinPerKm: number;
 }
 
 export function RouteStats({
 	routes,
 	activeRoute,
 	onSelectRoute,
+	paceMinPerKm,
 }: RouteStatsProps) {
 	const primary = routes[activeRoute ?? 0];
 
@@ -25,7 +27,14 @@ export function RouteStats({
 			<div className="flex items-center justify-between gap-4 flex-wrap">
 				<div className="flex items-center gap-6 flex-wrap">
 					<Stat label="Distance" value={formatDistance(primary.distance)} />
-					<Stat label="Est. time" value={formatDuration(primary.duration)} />
+					<Stat
+						label="Est. time"
+						value={formatDuration(
+							primary.duration,
+							primary.distance,
+							paceMinPerKm,
+						)}
+					/>
 					{FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK && (
 						<Stat
 							label="Traffic lights"

@@ -46,8 +46,11 @@ export const PARK_SAMPLE_COUNT_FACTOR = 25; // samples per 25m
 // API timeouts
 export const OVERPASS_TIMEOUT_SECONDS = 15; // Reduced from 25 to fail faster
 
-// Default walking speed for duration estimation (km/h)
-export const DEFAULT_WALKING_SPEED_KMH = 5;
+// Default running pace for duration estimation (minutes per km)
+export const DEFAULT_PACE_MIN_PER_KM = 6; // 6 min/km = 10 km/h
+export const MIN_PACE_MIN_PER_KM = 3; // Fast runner: 3 min/km = 20 km/h
+export const MAX_PACE_MIN_PER_KM = 10; // Slow jogger: 10 min/km = 6 km/h
+export const PACE_STEP = 0.25; // 15 seconds
 
 // Toast configuration
 export const TOAST_DURATION_MS = 5000;

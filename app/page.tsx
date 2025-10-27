@@ -41,6 +41,7 @@ function HomePage() {
 		updateDistance,
 		updateAvoidTrafficLights,
 		updatePreferParks,
+		updatePace,
 	} = usePreferences();
 
 	// Ensure component is mounted (client-side only)
@@ -159,6 +160,8 @@ function HomePage() {
 				setAvoidLights={updateAvoidTrafficLights}
 				preferParks={preferences.preferParks}
 				setPreferParks={updatePreferParks}
+				pace={preferences.paceMinPerKm}
+				setPace={updatePace}
 				onFindRoutes={handleFindRoutes}
 				isPending={isLoading}
 			/>
@@ -169,6 +172,7 @@ function HomePage() {
 					routes={routes}
 					activeRoute={activeRoute}
 					onSelectRoute={setActiveRoute}
+					paceMinPerKm={preferences.paceMinPerKm}
 				/>
 			)}
 

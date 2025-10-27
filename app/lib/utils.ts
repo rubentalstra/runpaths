@@ -20,9 +20,24 @@ export function formatDistance(meters: number): string {
 
 /**
  * Format duration in seconds to human readable format
+ * @param seconds - Duration in seconds
+ * @param distanceMeters - Optional distance in meters to calculate using custom pace
+ * @param paceMinPerKm - Optional pace in minutes per kilometer
  */
-export function formatDuration(seconds: number): string {
-	const minutes = Math.round(seconds / 60);
+export function formatDuration(
+	seconds: number,
+	distanceMeters?: number,
+	paceMinPerKm?: number,
+): string {
+	let totalSeconds = seconds;
+
+	// If distance and pace are provided, calculate duration based on pace
+	if (distanceMeters !== undefined && paceMinPerKm !== undefined) {
+		const distanceKm = distanceMeters / 1000;
+		totalSeconds = distanceKm * paceMinPerKm * 60;
+	}
+
+	const minutes = Math.round(totalSeconds / 60);
 	if (minutes < 60) {
 		return `${minutes}min`;
 	}

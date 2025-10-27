@@ -23,7 +23,7 @@ import {
 	PARK_NEAR_DISTANCE_METERS,
 	PARK_SAMPLE_COUNT_FACTOR,
 	OVERPASS_TIMEOUT_SECONDS,
-	DEFAULT_WALKING_SPEED_KMH,
+	DEFAULT_PACE_MIN_PER_KM,
 	DISTANCE_PENALTY_WEIGHT,
 	LIGHTS_PENALTY_WEIGHT,
 	PARKS_BONUS_WEIGHT,
@@ -32,6 +32,9 @@ import {
 	FEATURES,
 } from "./lib/constants";
 import { generateId, sleep } from "./lib/utils";
+
+// Convert pace to speed for fallback calculations (km/h)
+const DEFAULT_SPEED_KMH = 60 / DEFAULT_PACE_MIN_PER_KM;
 
 /**
  * Server action to find running routes based on preferences
@@ -100,13 +103,12 @@ export async function findRoutes(
 					summary.distance ??
 					turf.length(feature as GeoJSON.Feature, { units: "kilometers" }) *
 						1000;
-				duration =
-					summary.duration ?? distance / (DEFAULT_WALKING_SPEED_KMH / 3.6);
+				duration = summary.duration ?? distance / (DEFAULT_SPEED_KMH / 3.6);
 			} else {
 				distance =
 					turf.length(feature as GeoJSON.Feature, { units: "kilometers" }) *
 					1000;
-				duration = distance / (DEFAULT_WALKING_SPEED_KMH / 3.6);
+				duration = distance / (DEFAULT_SPEED_KMH / 3.6);
 			}
 
 			const bbox = turf.bbox(feature as GeoJSON.Feature) as BoundingBox;

@@ -10,6 +10,9 @@ import {
 	MIN_PREFERENCE,
 	MAX_PREFERENCE,
 	PREFERENCE_STEP,
+	MIN_PACE_MIN_PER_KM,
+	MAX_PACE_MIN_PER_KM,
+	PACE_STEP,
 	FEATURES,
 } from "@/app/lib/constants";
 
@@ -20,6 +23,8 @@ interface ControlsProps {
 	readonly setAvoidLights: (value: number) => void;
 	readonly preferParks: number;
 	readonly setPreferParks: (value: number) => void;
+	readonly pace: number;
+	readonly setPace: (value: number) => void;
 	readonly onFindRoutes: () => void;
 	readonly isPending: boolean;
 }
@@ -31,12 +36,22 @@ export function Controls({
 	setAvoidLights,
 	preferParks,
 	setPreferParks,
+	pace,
+	setPace,
 	onFindRoutes,
 	isPending,
 }: ControlsProps) {
 	const distanceId = useId();
 	const avoidId = useId();
 	const preferId = useId();
+	const paceId = useId();
+
+	// Format pace display (e.g., "5:30" for 5.5 min/km)
+	const formatPace = (minPerKm: number): string => {
+		const minutes = Math.floor(minPerKm);
+		const seconds = Math.round((minPerKm - minutes) * 60);
+		return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+	};
 
 	return (
 		<div className="fixed left-4 top-1/2 -translate-y-1/2 w-[360px] max-w-[90vw] z-20 panel p-4 space-y-4">
@@ -127,6 +142,32 @@ export function Controls({
 					/>
 				</div>
 			)}
+
+			{/* Running Pace */}
+			<div className="space-y-2">
+				<div className="flex justify-between">
+					<label htmlFor={paceId} className="text-sm font-medium">
+						Running pace
+					</label>
+					<span className="text-sm text-neutral-600">
+						{formatPace(pace)} min/km
+					</span>
+				</div>
+				<input
+					id={paceId}
+					type="range"
+					min={MIN_PACE_MIN_PER_KM}
+					max={MAX_PACE_MIN_PER_KM}
+					step={PACE_STEP}
+					value={pace}
+					onChange={(e) => setPace(Number(e.target.value))}
+					className="w-full"
+					aria-label={`Running pace: ${formatPace(pace)} minutes per kilometer`}
+				/>
+				<div className="text-xs text-neutral-500">
+					Faster runners: 3-5 min/km • Casual joggers: 6-8 min/km
+				</div>
+			</div>
 
 			{/* Find routes button */}
 			<button

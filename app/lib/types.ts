@@ -36,6 +36,7 @@ export const PreferencesSchema = z.object({
 	distanceMeters: z.number().min(800).max(50000), // 0.8km to 50km
 	avoidTrafficLights: z.number().min(0).max(1),
 	preferParks: z.number().min(0).max(1),
+	paceMinPerKm: z.number().min(3).max(10), // 3-10 min/km
 });
 
 export type Preferences = z.infer<typeof PreferencesSchema>;

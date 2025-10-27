@@ -6,10 +6,13 @@ import {
 	DEFAULT_DISTANCE_KM,
 	DEFAULT_AVOID_LIGHTS,
 	DEFAULT_PREFER_PARKS,
+	DEFAULT_PACE_MIN_PER_KM,
 	MIN_DISTANCE_KM,
 	MAX_DISTANCE_KM,
 	MIN_PREFERENCE,
 	MAX_PREFERENCE,
+	MIN_PACE_MIN_PER_KM,
+	MAX_PACE_MIN_PER_KM,
 } from "../lib/constants";
 import { clamp } from "../lib/utils";
 
@@ -18,6 +21,7 @@ interface UsePreferencesReturn {
 	updateDistance: (km: number) => void;
 	updateAvoidTrafficLights: (value: number) => void;
 	updatePreferParks: (value: number) => void;
+	updatePace: (minPerKm: number) => void;
 	resetToDefaults: () => void;
 }
 
@@ -26,6 +30,7 @@ export function usePreferences(): UsePreferencesReturn {
 		distanceMeters: DEFAULT_DISTANCE_KM * 1000,
 		avoidTrafficLights: DEFAULT_AVOID_LIGHTS,
 		preferParks: DEFAULT_PREFER_PARKS,
+		paceMinPerKm: DEFAULT_PACE_MIN_PER_KM,
 	});
 
 	const updateDistance = useCallback((km: number) => {
@@ -52,11 +57,24 @@ export function usePreferences(): UsePreferencesReturn {
 		}));
 	}, []);
 
+	const updatePace = useCallback((minPerKm: number) => {
+		const clampedValue = clamp(
+			minPerKm,
+			MIN_PACE_MIN_PER_KM,
+			MAX_PACE_MIN_PER_KM,
+		);
+		setPreferences((prev) => ({
+			...prev,
+			paceMinPerKm: clampedValue,
+		}));
+	}, []);
+
 	const resetToDefaults = useCallback(() => {
 		setPreferences({
 			distanceMeters: DEFAULT_DISTANCE_KM * 1000,
 			avoidTrafficLights: DEFAULT_AVOID_LIGHTS,
 			preferParks: DEFAULT_PREFER_PARKS,
+			paceMinPerKm: DEFAULT_PACE_MIN_PER_KM,
 		});
 	}, []);
 
@@ -65,6 +83,7 @@ export function usePreferences(): UsePreferencesReturn {
 		updateDistance,
 		updateAvoidTrafficLights,
 		updatePreferParks,
+		updatePace,
 		resetToDefaults,
 	};
 }
