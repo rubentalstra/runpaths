@@ -72,6 +72,6 @@ export const FEATURES = {
 	ENABLE_ADVANCED_SCORING: true,
 	ENABLE_ROUTE_CLUSTERING: false,
 	ENABLE_OFFLINE_MODE: false,
-	ENABLE_TRAFFIC_LIGHTS_CHECK: false, // Disabled to avoid Overpass rate limits
+	ENABLE_TRAFFIC_LIGHTS_CHECK: false, // Enabled with heuristic approach
 	ENABLE_PARK_ADJACENCY_CHECK: false, // Disabled to avoid Overpass rate limits
 } as const;

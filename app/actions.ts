@@ -19,7 +19,6 @@ import {
 	SEEDS,
 	MIN_ROUTE_LENGTH,
 	MAX_ROUTES,
-	LIGHTS_NEAR_DISTANCE_METERS,
 	PARK_NEAR_DISTANCE_METERS,
 	PARK_SAMPLE_COUNT_FACTOR,
 	OVERPASS_TIMEOUT_SECONDS,
@@ -113,20 +112,17 @@ export async function findRoutes(
 
 			const bbox = turf.bbox(feature as GeoJSON.Feature) as BoundingBox;
 
-			// Only fetch traffic lights and parks if features are enabled
-			// This avoids Overpass API rate limiting issues
+			// Calculate traffic lights and parks if features are enabled
 			let trafficLights: TrafficLightInfo = { count: 0, positions: [] };
 			let parkAdj = 0;
 
 			if (FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK) {
 				trafficLights = await trafficLightsNearRoute(bbox, lineGeom).catch(
 					(err) => {
-						console.warn("Failed to fetch traffic lights:", err.message);
+						console.warn("Failed to estimate traffic lights:", err.message);
 						return { count: 0, positions: [] as Coordinate[] };
 					},
 				);
-				// Add delay between requests to avoid rate limiting
-				await sleep(500);
 			}
 
 			if (FEATURES.ENABLE_PARK_ADJACENCY_CHECK) {
@@ -253,38 +249,123 @@ async function orsRoundTrip(
 }
 
 /**
- * Count traffic lights near the route
+ * Fetch real traffic lights from OpenStreetMap using a simple query
+ * Uses OSM's API with quick fallback to heuristics if unavailable
  */
 async function trafficLightsNearRoute(
 	bbox: BoundingBox,
 	lineGeom: GeoJSON.LineString,
 ): Promise<TrafficLightInfo> {
 	const [minX, minY, maxX, maxY] = bbox;
-	const query = `
-    [out:json][timeout:${OVERPASS_TIMEOUT_SECONDS}];
-    node["highway"="traffic_signals"](${minY},${minX},${maxY},${maxX});
-    out body;
-  `;
 
-	const response = await overpass(query);
-	const positions: Coordinate[] = [];
-	let count = 0;
+	// Calculate bbox size - if too large, skip API call
+	const bboxWidth = maxX - minX;
+	const bboxHeight = maxY - minY;
 
-	for (const el of response.elements) {
-		if (el.type === "node" && el.lon !== undefined && el.lat !== undefined) {
-			const point = turf.point([el.lon, el.lat]);
+	// Only query OSM if bbox is reasonable (< 0.05 degrees ~5km)
+	if (bboxWidth > 0.05 || bboxHeight > 0.05) {
+		console.log("Bbox too large for OSM API, using heuristic");
+		return fallbackTrafficLightEstimate(lineGeom);
+	}
+
+	try {
+		// Use OSM's simpler API endpoint for traffic signals
+		// Format: bbox=left,bottom,right,top (minX,minY,maxX,maxY)
+		const osmUrl = `https://www.openstreetmap.org/api/0.6/map?bbox=${minX},${minY},${maxX},${maxY}`;
+
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+
+		const response = await fetch(osmUrl, {
+			signal: controller.signal,
+			headers: {
+				"User-Agent": "RunPaths-App/1.0",
+			},
+		});
+
+		clearTimeout(timeoutId);
+
+		if (!response.ok) {
+			console.warn(`OSM API returned ${response.status}, using heuristic`);
+			return fallbackTrafficLightEstimate(lineGeom);
+		}
+
+		const xmlText = await response.text();
+
+		// Parse XML to find traffic signals
+		// Traffic signals in OSM have tag: highway=traffic_signals
+		const trafficLightRegex =
+			/<node[^>]*id="(\d+)"[^>]*lat="([^"]+)"[^>]*lon="([^"]+)"[^>]*>[\s\S]*?<tag k="highway" v="traffic_signals"\/>/g;
+
+		const positions: Coordinate[] = [];
+		let match: RegExpExecArray | null = null;
+
+		match = trafficLightRegex.exec(xmlText);
+		while (match !== null) {
+			const lon = parseFloat(match[3]);
+			const lat = parseFloat(match[2]);
+
+			// Check if this traffic light is near our route
+			const point = turf.point([lon, lat]);
 			const distance = turf.pointToLineDistance(point, lineGeom, {
 				units: "meters",
 			});
 
-			if (distance <= LIGHTS_NEAR_DISTANCE_METERS) {
-				count++;
-				positions.push([el.lon, el.lat]);
+			// Only include if within 30 meters of the route
+			if (distance <= 30) {
+				positions.push([lon, lat]);
+			}
+
+			match = trafficLightRegex.exec(xmlText);
+		}
+
+		console.log(`Found ${positions.length} traffic lights from OSM`);
+
+		return {
+			count: positions.length,
+			positions: positions,
+		};
+	} catch (fetchError) {
+		// If API fails, fall back to heuristic approach
+		console.warn("OSM API failed, using heuristic:", fetchError);
+		return fallbackTrafficLightEstimate(lineGeom);
+	}
+}
+
+/**
+ * Fallback heuristic when API is unavailable
+ */
+function fallbackTrafficLightEstimate(
+	lineGeom: GeoJSON.LineString,
+): TrafficLightInfo {
+	const positions: Coordinate[] = [];
+	const coords = lineGeom.coordinates;
+
+	// Calculate bearing changes (turns) which often indicate intersections
+	let significantTurns = 0;
+	for (let i = 1; i < coords.length - 1; i++) {
+		const bearing1 = turf.bearing(coords[i - 1], coords[i]);
+		const bearing2 = turf.bearing(coords[i], coords[i + 1]);
+		const angleDiff = Math.abs(bearing2 - bearing1);
+
+		// If the angle change is significant (> 30 degrees), it's likely an intersection
+		if (angleDiff > 30 && angleDiff < 330) {
+			significantTurns++;
+			// Add this as a potential traffic light location
+			if (positions.length < 50) {
+				// Cap at 50 markers
+				positions.push(coords[i] as Coordinate);
 			}
 		}
 	}
 
-	return { count, positions };
+	// Estimate traffic lights as ~40% of significant turns for urban routes
+	const estimatedCount = Math.round(significantTurns * 0.4);
+
+	return {
+		count: estimatedCount,
+		positions: positions.slice(0, estimatedCount),
+	};
 }
 
 /**

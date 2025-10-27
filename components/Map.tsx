@@ -110,7 +110,13 @@ export function MapComponent({
 		const map = mapRef.current;
 		if (!map) return;
 		// Remove previous sources/layers
-		const ids = ["route-main", "route-alt-1", "route-alt-2", "lights"];
+		const ids = [
+			"route-main",
+			"route-alt-1",
+			"route-alt-2",
+			"lights",
+			"lights-background",
+		];
 		ids.forEach((id) => {
 			if (map.getLayer(id)) map.removeLayer(id);
 			if (map.getSource(id)) map.removeSource(id);
@@ -190,15 +196,29 @@ export function MapComponent({
 					})),
 				} as GeoJSON.FeatureCollection,
 			});
+
+			// Add a subtle circle background
+			map.addLayer({
+				id: "lights-background",
+				type: "circle",
+				source: "lights",
+				paint: {
+					"circle-radius": 8,
+					"circle-color": "#FEE2E2",
+					"circle-opacity": 0.6,
+				},
+			});
+
+			// Add the main traffic light indicator
 			map.addLayer({
 				id: "lights",
 				type: "circle",
 				source: "lights",
 				paint: {
-					"circle-radius": 4,
-					"circle-color": "#E11D48",
+					"circle-radius": 5,
+					"circle-color": "#DC2626",
 					"circle-stroke-color": "#ffffff",
-					"circle-stroke-width": 1,
+					"circle-stroke-width": 2,
 				},
 			});
 		}

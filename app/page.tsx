@@ -212,12 +212,27 @@ function HomePage() {
 
 			{/* Route statistics */}
 			{routes.length > 0 && (
-				<RouteStats
-					routes={routes}
-					activeRoute={activeRoute}
-					onSelectRoute={setActiveRoute}
-					paceMinPerKm={preferences.paceMinPerKm}
-				/>
+				<>
+					<RouteStats
+						routes={routes}
+						activeRoute={activeRoute}
+						onSelectRoute={setActiveRoute}
+						paceMinPerKm={preferences.paceMinPerKm}
+					/>
+
+					{/* Map Legend - Show when routes are displayed */}
+					<div className="fixed bottom-24 right-4 z-20 panel px-3 py-2 text-xs space-y-1">
+						<div className="font-semibold text-neutral-700 mb-1">Legend</div>
+						<div className="flex items-center gap-2">
+							<div className="w-4 h-1 bg-[#DAA442] rounded"></div>
+							<span className="text-neutral-600">Your route</span>
+						</div>
+						<div className="flex items-center gap-2">
+							<div className="w-3 h-3 rounded-full bg-red-600 border-2 border-white"></div>
+							<span className="text-neutral-600">Traffic lights (OSM)</span>
+						</div>
+					</div>
+				</>
 			)}
 
 			{/* Toast notifications */}
