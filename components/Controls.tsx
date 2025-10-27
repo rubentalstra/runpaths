@@ -55,7 +55,7 @@ export function Controls({
 
 	return (
 		<div className="fixed left-4 top-1/2 -translate-y-1/2 w-[360px] max-w-[90vw] z-20 panel p-4 space-y-4">
-			<h2 className="text-lg font-semibold text-brand">Plan your loop</h2>
+			<h2 className="text-lg font-semibold text-brand">Plan your Run</h2>
 
 			{/* Distance control */}
 			<div className="space-y-1">

@@ -23,6 +23,9 @@ import { ErrorFallback } from "@/components/ui/ErrorFallback";
 function HomePage() {
 	const mapId = useId();
 	const [isMounted, setIsMounted] = useState(false);
+	const [manualCoordinate, setManualCoordinate] = useState<Coordinate | null>(
+		null,
+	);
 
 	// Custom hooks for state management
 	const { location, state: locationState, isSupported } = useGeolocation();
@@ -49,8 +52,8 @@ function HomePage() {
 		setIsMounted(true);
 	}, []);
 
-	// Current coordinate from geolocation or manual selection
-	const currentCoordinate = location?.coordinate || null;
+	// Current coordinate: prioritize manual selection over geolocation
+	const currentCoordinate = manualCoordinate || location?.coordinate || null;
 
 	// Show city search when geolocation fails or is denied (only after mount)
 	const showCitySearch =
@@ -91,7 +94,8 @@ function HomePage() {
 
 	// Handle city selection from search
 	const handleCitySelect = useCallback(
-		(_coordinate: Coordinate, cityName: string) => {
+		(coordinate: Coordinate, cityName: string) => {
+			setManualCoordinate(coordinate);
 			addToast(
 				`Starting location set to ${cityName}. You can now find routes!`,
 				"success",
@@ -102,7 +106,8 @@ function HomePage() {
 
 	// Handle map click for manual coordinate selection
 	const handleMapClick = useCallback(
-		(_coordinate: Coordinate) => {
+		(coordinate: Coordinate) => {
+			setManualCoordinate(coordinate);
 			addToast(
 				"Start location set. Click 'Find routes' to get running paths.",
 				"success",
@@ -111,22 +116,41 @@ function HomePage() {
 		[addToast],
 	);
 
+	// Reset to geolocation
+	const handleResetToGeolocation = useCallback(() => {
+		setManualCoordinate(null);
+		if (location?.coordinate) {
+			addToast("Reset to your current location", "info");
+		} else {
+			addToast(
+				"No geolocation available. Click the map to set location.",
+				"info",
+			);
+		}
+	}, [location, addToast]);
+
 	// Get status message for top bar
 	const statusMessage = useMemo(() => {
-		if (locationState === "loading") {
+		if (locationState === "loading" && !manualCoordinate) {
 			return "Getting your location...";
 		}
-		if (locationState === "denied") {
+		if (locationState === "denied" && !manualCoordinate) {
 			return "Location access denied. Search for your city or click the map.";
 		}
-		if (locationState === "error" || locationState === "timeout") {
+		if (
+			(locationState === "error" || locationState === "timeout") &&
+			!manualCoordinate
+		) {
 			return "Location unavailable. Search for your city or click the map.";
+		}
+		if (manualCoordinate) {
+			return 'Custom location set. Click "Find routes" to get running paths.';
 		}
 		if (currentCoordinate) {
 			return 'Start location set. Click "Find routes" to get running paths.';
 		}
 		return 'Click the map to set your start location, then "Find routes".';
-	}, [locationState, currentCoordinate]);
+	}, [locationState, currentCoordinate, manualCoordinate]);
 
 	return (
 		<div className="h-screen w-screen relative bg-neutral-50">
@@ -138,6 +162,7 @@ function HomePage() {
 					activeRoute={activeRoute}
 					onMapClick={handleMapClick}
 					initialCenter={currentCoordinate}
+					isManualLocation={manualCoordinate !== null}
 				/>
 			</Suspense>
 
@@ -147,7 +172,26 @@ function HomePage() {
 				<span className="text-sm text-neutral-600 truncate">
 					{statusMessage}
 				</span>
+				{manualCoordinate && location?.coordinate && (
+					<button
+						type="button"
+						onClick={handleResetToGeolocation}
+						className="ml-auto px-3 py-1 text-xs rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors font-medium whitespace-nowrap"
+						aria-label="Reset to current location"
+					>
+						Reset to my location
+					</button>
+				)}
 			</div>
+
+			{/* Helpful instruction tooltip - only show when no routes yet */}
+			{!currentCoordinate && routes.length === 0 && (
+				<div className="fixed top-20 left-1/2 -translate-x-1/2 z-10 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg shadow-sm max-w-[90vw] animate-fade-in">
+					<p className="text-sm text-blue-800 text-center">
+						👆 Click anywhere on the map to set your starting location
+					</p>
+				</div>
+			)}
 
 			{/* City search modal */}
 			<CitySearch isVisible={showCitySearch} onCitySelect={handleCitySelect} />

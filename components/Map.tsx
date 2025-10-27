@@ -19,6 +19,7 @@ interface MapProps {
 	readonly activeRoute: number | null;
 	readonly onMapClick: (lngLat: Coordinate) => void;
 	readonly initialCenter?: Coordinate | null;
+	readonly isManualLocation?: boolean;
 }
 
 export function MapComponent({
@@ -28,6 +29,7 @@ export function MapComponent({
 	activeRoute,
 	onMapClick,
 	initialCenter,
+	isManualLocation = false,
 }: MapProps) {
 	const mapRef = useRef<MapLibreMap | null>(null);
 
@@ -53,6 +55,10 @@ export function MapComponent({
 			zoom: DEFAULT_MAP_ZOOM,
 		});
 		map.addControl(new maplibregl.NavigationControl({}), "top-right");
+
+		// Add crosshair cursor when hovering over the map
+		map.getCanvas().style.cursor = "crosshair";
+
 		map.on("click", (e) => {
 			const lngLat: Coordinate = [e.lngLat.lng, e.lngLat.lat];
 			onMapClick(lngLat);
@@ -65,17 +71,39 @@ export function MapComponent({
 	useEffect(() => {
 		const map = mapRef.current;
 		if (!map || !start) return;
+
 		const el = document.createElement("div");
-		el.className = "rounded-full border-4 border-brand-accent bg-white";
-		el.style.width = "18px";
-		el.style.height = "18px";
-		const marker = new maplibregl.Marker({ element: el })
+
+		// Different styling for manual vs geolocation
+		if (isManualLocation) {
+			// Manual location: larger pin-style marker
+			el.innerHTML = `
+				<svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+					<path d="M12 0C5.4 0 0 5.4 0 12c0 7.2 12 20 12 20s12-12.8 12-20c0-6.6-5.4-12-12-12z" fill="#3B82F6"/>
+					<circle cx="12" cy="12" r="5" fill="white"/>
+				</svg>
+			`;
+			el.style.cursor = "pointer";
+			el.title = "Manual start location (click map to change)";
+		} else {
+			// Geolocation: original circle marker
+			el.className = "rounded-full border-4 border-brand-accent bg-white";
+			el.style.width = "18px";
+			el.style.height = "18px";
+			el.title = "Your current location";
+		}
+
+		const marker = new maplibregl.Marker({
+			element: el,
+			anchor: isManualLocation ? "bottom" : "center",
+		})
 			.setLngLat(start)
 			.addTo(map);
+
 		return () => {
 			marker.remove();
 		};
-	}, [start]);
+	}, [start, isManualLocation]);
 
 	// Draw routes
 	useEffect(() => {
