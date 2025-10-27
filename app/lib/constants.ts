@@ -1,5 +1,5 @@
 // Map configuration
-export const DEFAULT_MAP_CENTER: [number, number] = [4.8952, 52.3702];
+export const DEFAULT_MAP_CENTER: [number, number] = [4.8952, 52.3702]; // Amsterdam
 export const DEFAULT_MAP_ZOOM = 12;
 export const MAP_PADDING = 80;
 export const MAP_ANIMATION_DURATION = 600;
@@ -22,7 +22,7 @@ export const MIN_PREFERENCE = 0;
 export const MAX_PREFERENCE = 1;
 
 // Quick distance presets
-export const QUICK_DISTANCES = [3, 5, 10, 15];
+export const QUICK_DISTANCES = [3, 5, 10, 15] as const;
 
 // Scoring weights
 export const DISTANCE_PENALTY_WEIGHT = 40;
@@ -31,7 +31,7 @@ export const PARKS_BONUS_WEIGHT = 25;
 export const BASELINE_SCORE = 10;
 
 // Route generation
-export const SEEDS = [11, 22, 33, 44, 55];
+export const SEEDS = [11, 22, 33, 44, 55] as const;
 export const MIN_ROUTE_LENGTH = 800;
 export const MAX_ROUTES = 3;
 
@@ -44,7 +44,31 @@ export const PARK_NEAR_DISTANCE_METERS = 40;
 export const PARK_SAMPLE_COUNT_FACTOR = 25; // samples per 25m
 
 // API timeouts
-export const OVERPASS_TIMEOUT_SECONDS = 25;
+export const OVERPASS_TIMEOUT_SECONDS = 15; // Reduced from 25 to fail faster
 
 // Default walking speed for duration estimation (km/h)
 export const DEFAULT_WALKING_SPEED_KMH = 5;
+
+// Toast configuration
+export const TOAST_DURATION_MS = 5000;
+export const MAX_TOASTS = 5;
+
+// Error codes
+export const ERROR_CODES = {
+	ROUTE_GENERATION_FAILED: "ROUTE_GENERATION_FAILED",
+	GEOLOCATION_DENIED: "GEOLOCATION_DENIED",
+	GEOLOCATION_TIMEOUT: "GEOLOCATION_TIMEOUT",
+	GEOLOCATION_UNAVAILABLE: "GEOLOCATION_UNAVAILABLE",
+	API_TIMEOUT: "API_TIMEOUT",
+	NETWORK_ERROR: "NETWORK_ERROR",
+} as const;
+
+// Feature flags (for future use)
+export const FEATURES = {
+	ENABLE_ROUTE_CACHING: true,
+	ENABLE_ADVANCED_SCORING: true,
+	ENABLE_ROUTE_CLUSTERING: false,
+	ENABLE_OFFLINE_MODE: false,
+	ENABLE_TRAFFIC_LIGHTS_CHECK: false, // Disabled to avoid Overpass rate limits
+	ENABLE_PARK_ADJACENCY_CHECK: false, // Disabled to avoid Overpass rate limits
+} as const;

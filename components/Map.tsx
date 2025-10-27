@@ -3,22 +3,22 @@
 import { useEffect, useRef } from "react";
 import maplibregl, { type Map as MapLibreMap } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
-import type { RouteSummary } from "../app/types";
-import type { Coordinate } from "ors-client";
+import type { RouteSummary, Coordinate } from "@/app/lib/types";
 import {
 	DEFAULT_MAP_CENTER,
 	DEFAULT_MAP_ZOOM,
 	MAP_PADDING,
 	MAP_ANIMATION_DURATION,
-} from "../app/constants";
+	FEATURES,
+} from "@/app/lib/constants";
 
 interface MapProps {
-	mapId: string;
-	start: Coordinate | null;
-	routes: RouteSummary[];
-	activeRoute: number | null;
-	onMapClick: (lngLat: Coordinate) => void;
-	initialCenter?: Coordinate | null;
+	readonly mapId: string;
+	readonly start: Coordinate | null;
+	readonly routes: readonly RouteSummary[];
+	readonly activeRoute: number | null;
+	readonly onMapClick: (lngLat: Coordinate) => void;
+	readonly initialCenter?: Coordinate | null;
 }
 
 export function MapComponent({
@@ -146,16 +146,19 @@ export function MapComponent({
 			});
 		});
 
-		// Traffic lights near route
-		if (primary.lightsPositions?.length) {
+		// Traffic lights near route - only render if feature is enabled
+		if (
+			FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK &&
+			primary.trafficLights.positions.length > 0
+		) {
 			map.addSource("lights", {
 				type: "geojson",
 				data: {
 					type: "FeatureCollection",
-					features: primary.lightsPositions.map(([lon, lat]) => ({
-						type: "Feature",
+					features: primary.trafficLights.positions.map((coord) => ({
+						type: "Feature" as const,
 						properties: {},
-						geometry: { type: "Point", coordinates: [lon, lat] },
+						geometry: { type: "Point" as const, coordinates: coord },
 					})),
 				} as GeoJSON.FeatureCollection,
 			});

@@ -1,186 +1,209 @@
 "use client";
 
-import { useId, useState, useTransition, useEffect } from "react";
-import { findRoutes } from "./actions";
-import type { RouteSummary } from "./types";
-import type { Coordinate } from "ors-client";
-import { MapComponent } from "../components/Map";
-import { Controls } from "../components/Controls";
-import { RouteStats } from "../components/RouteStats";
-import { CitySearch } from "../components/CitySearch";
-import { ToastContainer, useToast } from "../components/Toast";
 import {
-	DEFAULT_DISTANCE_KM,
-	DEFAULT_AVOID_LIGHTS,
-	DEFAULT_PREFER_PARKS,
-	GEOLOCATION_TIMEOUT_MS,
-	GEOLOCATION_MAXIMUM_AGE_MS,
-} from "./constants";
+	useId,
+	useCallback,
+	useMemo,
+	Suspense,
+	useState,
+	useEffect,
+} from "react";
+import type { Coordinate } from "ors-client";
+import { ErrorBoundary } from "react-error-boundary";
 
-type LocationState = "loading" | "success" | "denied" | "error";
+import { useGeolocation, useToast, useRoutes, usePreferences } from "./hooks";
+import { MapComponent } from "@/components/Map";
+import { Controls } from "@/components/Controls";
+import { RouteStats } from "@/components/RouteStats";
+import { CitySearch } from "@/components/CitySearch";
+import { ToastContainer } from "@/components/Toast";
+import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
+import { ErrorFallback } from "@/components/ui/ErrorFallback";
 
-export default function Page() {
+function HomePage() {
 	const mapId = useId();
-	const [start, setStart] = useState<Coordinate | null>(null);
-	const [routes, setRoutes] = useState<RouteSummary[]>([]);
-	const [activeRoute, setActiveRoute] = useState<number | null>(null);
-	const [isPending, startTransition] = useTransition();
+	const [isMounted, setIsMounted] = useState(false);
 
-	const [kms, setKms] = useState(DEFAULT_DISTANCE_KM);
-	const [avoidLights, setAvoidLights] = useState(DEFAULT_AVOID_LIGHTS);
-	const [preferParks, setPreferParks] = useState(DEFAULT_PREFER_PARKS);
-
-	const [locationState, setLocationState] = useState<LocationState>("loading");
-	const [showCitySearch, setShowCitySearch] = useState(false);
-	const [currentCity, setCurrentCity] = useState<string>("");
-
+	// Custom hooks for state management
+	const { location, state: locationState, isSupported } = useGeolocation();
 	const { toasts, addToast, removeToast } = useToast();
+	const {
+		routes,
+		activeRoute,
+		isLoading,
+		error,
+		generateRoutes,
+		setActiveRoute,
+		clearError,
+	} = useRoutes();
+	const {
+		preferences,
+		updateDistance,
+		updateAvoidTrafficLights,
+		updatePreferParks,
+	} = usePreferences();
 
-	// Try to get user's location on mount
+	// Ensure component is mounted (client-side only)
 	useEffect(() => {
-		if (!navigator.geolocation) {
-			setLocationState("error");
-			setShowCitySearch(true);
-			addToast(
-				"Geolocation is not supported by this browser. Please search for your city.",
-				"error",
-			);
-			return;
-		}
+		setIsMounted(true);
+	}, []);
 
-		addToast("Getting your location...", "info");
-		navigator.geolocation.getCurrentPosition(
-			(position) => {
-				const lngLat: Coordinate = [
-					position.coords.longitude,
-					position.coords.latitude,
-				];
-				setStart(lngLat);
-				setLocationState("success");
-				addToast("Location found! You can now find routes.", "success");
-			},
-			(error) => {
-				console.warn("Geolocation error:", error);
-				setLocationState(
-					error.code === error.PERMISSION_DENIED ? "denied" : "error",
-				);
-				setShowCitySearch(true);
-				const message =
-					error.code === error.PERMISSION_DENIED
-						? "Location access denied. Please search for your city or click on the map."
-						: "Unable to get your location. Please search for your city or click on the map.";
-				addToast(message, "error");
-			},
-			{
-				timeout: GEOLOCATION_TIMEOUT_MS,
-				maximumAge: GEOLOCATION_MAXIMUM_AGE_MS,
-				enableHighAccuracy: true,
-			},
-		);
-	}, [addToast]);
+	// Current coordinate from geolocation or manual selection
+	const currentCoordinate = location?.coordinate || null;
 
-	async function handleFindRoutes() {
-		if (!start) {
+	// Show city search when geolocation fails or is denied (only after mount)
+	const showCitySearch =
+		isMounted &&
+		(!isSupported || locationState === "denied" || locationState === "error");
+
+	// Handle route generation
+	const handleFindRoutes = useCallback(async () => {
+		if (!currentCoordinate) {
 			addToast("Please set your starting location first.", "error");
 			return;
 		}
-		startTransition(async () => {
-			try {
-				addToast("Finding routes...", "info");
-				const data = await findRoutes(start, {
-					distanceMeters: Math.round(kms * 1000),
-					avoidLights,
-					preferParks,
-				});
-				setRoutes(data.routes);
-				setActiveRoute(0);
+
+		clearError();
+		addToast("Finding routes...", "info");
+
+		try {
+			await generateRoutes(currentCoordinate, preferences);
+			if (routes.length > 0) {
 				addToast(
-					`Found ${data.routes.length} route${data.routes.length === 1 ? "" : "s"}!`,
+					`Found ${routes.length} route${routes.length === 1 ? "" : "s"}!`,
 					"success",
 				);
-			} catch (e) {
-				console.error(e);
-				const message =
-					(e as Error).message || "Error fetching routes. Please try again.";
-				addToast(message, "error");
 			}
-		});
-	}
+		} catch (err) {
+			const message =
+				err instanceof Error ? err.message : "Failed to generate routes";
+			addToast(message, "error");
+		}
+	}, [
+		currentCoordinate,
+		preferences,
+		generateRoutes,
+		addToast,
+		clearError,
+		routes.length,
+	]);
 
-	function handleCitySelect(lngLat: Coordinate, cityName: string) {
-		setStart(lngLat);
-		setCurrentCity(cityName);
-		setShowCitySearch(false);
-		setLocationState("success");
-		addToast(
-			`Starting location set to ${cityName}. You can now find routes!`,
-			"success",
-		);
-	}
+	// Handle city selection from search
+	const handleCitySelect = useCallback(
+		(_coordinate: Coordinate, cityName: string) => {
+			addToast(
+				`Starting location set to ${cityName}. You can now find routes!`,
+				"success",
+			);
+		},
+		[addToast],
+	);
 
-	function getTopBarMessage() {
+	// Handle map click for manual coordinate selection
+	const handleMapClick = useCallback(
+		(_coordinate: Coordinate) => {
+			addToast(
+				"Start location set. Click 'Find routes' to get running paths.",
+				"success",
+			);
+		},
+		[addToast],
+	);
+
+	// Get status message for top bar
+	const statusMessage = useMemo(() => {
 		if (locationState === "loading") {
 			return "Getting your location...";
 		}
 		if (locationState === "denied") {
 			return "Location access denied. Search for your city or click the map.";
 		}
-		if (locationState === "error") {
+		if (locationState === "error" || locationState === "timeout") {
 			return "Location unavailable. Search for your city or click the map.";
 		}
-		if (start && currentCity) {
-			return `Starting in ${currentCity}. Click "Find routes" to get running paths.`;
-		}
-		if (start) {
+		if (currentCoordinate) {
 			return 'Start location set. Click "Find routes" to get running paths.';
 		}
 		return 'Click the map to set your start location, then "Find routes".';
-	}
+	}, [locationState, currentCoordinate]);
 
 	return (
-		<div className="h-screen w-screen relative">
-			<MapComponent
-				mapId={mapId}
-				start={start}
-				routes={routes}
-				activeRoute={activeRoute}
-				onMapClick={(lngLat) => {
-					setStart(lngLat);
-					setCurrentCity("");
-					addToast(
-						"Start location set. Click 'Find routes' to get running paths.",
-						"success",
-					);
-				}}
-				initialCenter={start}
-			/>
+		<div className="h-screen w-screen relative bg-neutral-50">
+			<Suspense fallback={<LoadingSpinner />}>
+				<MapComponent
+					mapId={mapId}
+					start={currentCoordinate}
+					routes={routes}
+					activeRoute={activeRoute}
+					onMapClick={handleMapClick}
+					initialCenter={currentCoordinate}
+				/>
+			</Suspense>
 
-			{/* Top bar */}
-			<div className="fixed top-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 panel flex items-center gap-3">
+			{/* Top status bar */}
+			<div className="fixed top-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 panel flex items-center gap-3 max-w-[90vw]">
 				<div className="font-semibold text-brand">RunPaths</div>
-				<span className="text-sm text-neutral-500">{getTopBarMessage()}</span>
+				<span className="text-sm text-neutral-600 truncate">
+					{statusMessage}
+				</span>
 			</div>
 
+			{/* City search modal */}
 			<CitySearch isVisible={showCitySearch} onCitySelect={handleCitySelect} />
 
+			{/* Controls panel */}
 			<Controls
-				kms={kms}
-				setKms={setKms}
-				avoidLights={avoidLights}
-				setAvoidLights={setAvoidLights}
-				preferParks={preferParks}
-				setPreferParks={setPreferParks}
+				kms={preferences.distanceMeters / 1000}
+				setKms={updateDistance}
+				avoidLights={preferences.avoidTrafficLights}
+				setAvoidLights={updateAvoidTrafficLights}
+				preferParks={preferences.preferParks}
+				setPreferParks={updatePreferParks}
 				onFindRoutes={handleFindRoutes}
-				isPending={isPending}
+				isPending={isLoading}
 			/>
 
-			<RouteStats
-				routes={routes}
-				activeRoute={activeRoute}
-				onSelectRoute={setActiveRoute}
-			/>
+			{/* Route statistics */}
+			{routes.length > 0 && (
+				<RouteStats
+					routes={routes}
+					activeRoute={activeRoute}
+					onSelectRoute={setActiveRoute}
+				/>
+			)}
 
+			{/* Toast notifications */}
 			<ToastContainer toasts={toasts} removeToast={removeToast} />
+
+			{/* Route generation error display */}
+			{error && (
+				<div className="fixed top-20 left-1/2 -translate-x-1/2 z-20 max-w-md">
+					<div className="bg-red-50 border border-red-200 rounded-lg p-4 animate-slide-up">
+						<div className="flex items-center gap-2">
+							<div className="text-red-600 font-medium">
+								Route Generation Failed
+							</div>
+							<button
+								type="button"
+								onClick={clearError}
+								className="ml-auto text-red-400 hover:text-red-600 text-xl leading-none"
+								aria-label="Dismiss error"
+							>
+								×
+							</button>
+						</div>
+						<p className="text-red-700 text-sm mt-1">{error}</p>
+					</div>
+				</div>
+			)}
 		</div>
+	);
+}
+
+export default function Page() {
+	return (
+		<ErrorBoundary FallbackComponent={ErrorFallback}>
+			<HomePage />
+		</ErrorBoundary>
 	);
 }

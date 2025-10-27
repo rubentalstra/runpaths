@@ -1,7 +1,7 @@
 "use client";
 
 import { useId } from "react";
-import clsx from "classnames";
+import { cn } from "@/app/lib/utils";
 import {
 	MIN_DISTANCE_KM,
 	MAX_DISTANCE_KM,
@@ -10,17 +10,18 @@ import {
 	MIN_PREFERENCE,
 	MAX_PREFERENCE,
 	PREFERENCE_STEP,
-} from "../app/constants";
+	FEATURES,
+} from "@/app/lib/constants";
 
 interface ControlsProps {
-	kms: number;
-	setKms: (value: number) => void;
-	avoidLights: number;
-	setAvoidLights: (value: number) => void;
-	preferParks: number;
-	setPreferParks: (value: number) => void;
-	onFindRoutes: () => void;
-	isPending: boolean;
+	readonly kms: number;
+	readonly setKms: (value: number) => void;
+	readonly avoidLights: number;
+	readonly setAvoidLights: (value: number) => void;
+	readonly preferParks: number;
+	readonly setPreferParks: (value: number) => void;
+	readonly onFindRoutes: () => void;
+	readonly isPending: boolean;
 }
 
 export function Controls({
@@ -38,10 +39,12 @@ export function Controls({
 	const preferId = useId();
 
 	return (
-		<div className="fixed left-4 top-1/2 -translate-y-1/2 w-[360px] z-20 panel p-4 space-y-4">
+		<div className="fixed left-4 top-1/2 -translate-y-1/2 w-[360px] max-w-[90vw] z-20 panel p-4 space-y-4">
 			<h2 className="text-lg font-semibold text-brand">Plan your loop</h2>
+
+			{/* Distance control */}
 			<div className="space-y-1">
-				<label htmlFor={distanceId} className="text-sm font-medium">
+				<label htmlFor={distanceId} className="text-sm font-medium block">
 					Target distance: <span className="text-brand-accent">{kms} km</span>
 				</label>
 				<input
@@ -53,6 +56,7 @@ export function Controls({
 					value={kms}
 					onChange={(e) => setKms(Number(e.target.value))}
 					className="w-full"
+					aria-label={`Distance: ${kms} kilometers`}
 				/>
 				<div className="flex gap-2">
 					{QUICK_DISTANCES.map((k) => (
@@ -60,63 +64,88 @@ export function Controls({
 							key={k}
 							type="button"
 							onClick={() => setKms(k)}
-							className={clsx(
-								"px-3 py-1 rounded-full border text-sm",
+							className={cn(
+								"px-3 py-1 rounded-full border text-sm transition-colors",
 								kms === k
 									? "bg-brand-accent text-white border-brand-accent"
 									: "border-neutral-300 hover:bg-neutral-100",
 							)}
+							aria-label={`Set distance to ${k} kilometers`}
 						>
 							{k}k
 						</button>
 					))}
 				</div>
 			</div>
-			<div className="space-y-2">
-				<div className="flex justify-between">
-					<label htmlFor={avoidId} className="text-sm font-medium">
-						Avoid traffic lights
-					</label>
-					<span className="text-sm">{Math.round(avoidLights * 100)}%</span>
+
+			{/* Avoid Traffic Lights - Only show if feature is enabled */}
+			{FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK && (
+				<div className="space-y-2">
+					<div className="flex justify-between">
+						<label htmlFor={avoidId} className="text-sm font-medium">
+							Avoid traffic lights
+						</label>
+						<span className="text-sm text-neutral-600">
+							{Math.round(avoidLights * 100)}%
+						</span>
+					</div>
+					<input
+						id={avoidId}
+						type="range"
+						min={MIN_PREFERENCE}
+						max={MAX_PREFERENCE}
+						step={PREFERENCE_STEP}
+						value={avoidLights}
+						onChange={(e) => setAvoidLights(Number(e.target.value))}
+						className="w-full"
+						aria-label={`Avoid traffic lights: ${Math.round(avoidLights * 100)} percent`}
+					/>
 				</div>
-				<input
-					id={avoidId}
-					type="range"
-					min={MIN_PREFERENCE}
-					max={MAX_PREFERENCE}
-					step={PREFERENCE_STEP}
-					value={avoidLights}
-					onChange={(e) => setAvoidLights(Number(e.target.value))}
-					className="w-full"
-				/>
-			</div>
-			<div className="space-y-2">
-				<div className="flex justify-between">
-					<label htmlFor={preferId} className="text-sm font-medium">
-						Prefer parks
-					</label>
-					<span className="text-sm">{Math.round(preferParks * 100)}%</span>
+			)}
+
+			{/* Prefer Parks - Only show if feature is enabled */}
+			{FEATURES.ENABLE_PARK_ADJACENCY_CHECK && (
+				<div className="space-y-2">
+					<div className="flex justify-between">
+						<label htmlFor={preferId} className="text-sm font-medium">
+							Prefer parks
+						</label>
+						<span className="text-sm text-neutral-600">
+							{Math.round(preferParks * 100)}%
+						</span>
+					</div>
+					<input
+						id={preferId}
+						type="range"
+						min={MIN_PREFERENCE}
+						max={MAX_PREFERENCE}
+						step={PREFERENCE_STEP}
+						value={preferParks}
+						onChange={(e) => setPreferParks(Number(e.target.value))}
+						className="w-full"
+						aria-label={`Prefer parks: ${Math.round(preferParks * 100)} percent`}
+					/>
 				</div>
-				<input
-					id={preferId}
-					type="range"
-					min={MIN_PREFERENCE}
-					max={MAX_PREFERENCE}
-					step={PREFERENCE_STEP}
-					value={preferParks}
-					onChange={(e) => setPreferParks(Number(e.target.value))}
-					className="w-full"
-				/>
-			</div>
+			)}
+
+			{/* Find routes button */}
 			<button
 				type="button"
 				onClick={onFindRoutes}
 				disabled={isPending}
-				className="w-full bg-brand text-white rounded-xl py-3 hover:bg-brand-dark transition disabled:opacity-50"
+				className={cn(
+					"w-full rounded-xl py-3 transition-colors font-medium",
+					isPending
+						? "bg-neutral-300 text-neutral-500 cursor-not-allowed"
+						: "bg-brand text-white hover:bg-brand-dark",
+				)}
+				aria-label="Find running routes"
 			>
 				{isPending ? "Finding routes..." : "Find routes"}
 			</button>
-			<div className="text-xs text-neutral-500">
+
+			{/* Attribution */}
+			<div className="text-xs text-neutral-500 leading-relaxed">
 				Tiles © OpenStreetMap contributors. Routing by OpenRouteService. Data
 				via Overpass API.
 			</div>

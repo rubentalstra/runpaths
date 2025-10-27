@@ -4,40 +4,86 @@ import {
 	OpenRouteService,
 	type DirectionsGeoJSONResponse,
 	type Coordinate,
+	type Profile,
 } from "ors-client";
 import * as turf from "@turf/turf";
-import type { Prefs, TrafficLightResult, OverpassResponse } from "./types";
+import type {
+	Preferences,
+	RouteSummary,
+	RouteGenerationResponse,
+	TrafficLightInfo,
+	OverpassResponse,
+	BoundingBox,
+} from "./lib/types";
+import {
+	SEEDS,
+	MIN_ROUTE_LENGTH,
+	MAX_ROUTES,
+	LIGHTS_NEAR_DISTANCE_METERS,
+	PARK_NEAR_DISTANCE_METERS,
+	PARK_SAMPLE_COUNT_FACTOR,
+	OVERPASS_TIMEOUT_SECONDS,
+	DEFAULT_WALKING_SPEED_KMH,
+	DISTANCE_PENALTY_WEIGHT,
+	LIGHTS_PENALTY_WEIGHT,
+	PARKS_BONUS_WEIGHT,
+	BASELINE_SCORE,
+	MAX_LIGHTS_FOR_PENALTY,
+	FEATURES,
+} from "./lib/constants";
+import { generateId, sleep } from "./lib/utils";
 
-export async function findRoutes(start: Coordinate, prefs: Prefs) {
-	const apiKey = process.env.ORS_API_KEY;
-	if (!apiKey) {
-		throw new Error("Missing ORS_API_KEY environment variable");
-	}
+/**
+ * Server action to find running routes based on preferences
+ * @param start - Starting coordinate [longitude, latitude]
+ * @param preferences - User preferences for route generation
+ * @returns Route generation response with routes and metadata
+ */
+export async function findRoutes(
+	start: Coordinate,
+	preferences: Preferences,
+): Promise<RouteGenerationResponse> {
+	const startTime = Date.now();
+	const requestId = generateId();
 
-	const ors = new OpenRouteService({ apiKey });
-	const seeds = [11, 22, 33, 44, 55];
+	try {
+		const apiKey = process.env.ORS_API_KEY;
+		if (!apiKey) {
+			throw new Error("Missing ORS_API_KEY environment variable");
+		}
 
-	const candidates = (
-		await Promise.allSettled(
-			seeds.map((seed) => orsRoundTrip(ors, start, prefs.distanceMeters, seed)),
-		)
-	).flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
+		const ors = new OpenRouteService({ apiKey });
 
-	if (!candidates.length) {
-		throw new Error("Failed to generate any routes. Please try again.");
-	}
+		// Generate multiple route candidates with different seeds
+		const candidates = (
+			await Promise.allSettled(
+				SEEDS.map((seed) =>
+					orsRoundTrip(ors, start, preferences.distanceMeters, seed),
+				),
+			)
+		).flatMap((r) => (r.status === "fulfilled" ? [r.value] : []));
 
-	const enriched = await Promise.all(
-		candidates.map(async (route, i) => {
-			const routeData = route;
-			const feature = routeData.features?.[0];
+		if (!candidates.length) {
+			throw new Error("Failed to generate any routes. Please try again.");
+		}
+
+		// Enrich routes with traffic lights and park adjacency data
+		// Process sequentially to avoid rate limiting
+		const enriched: RouteSummary[] = [];
+
+		for (let i = 0; i < candidates.length; i++) {
+			const route = candidates[i];
+			if (!route) continue;
+
+			const feature = route.features[0];
 			if (!feature) {
-				throw new Error("Invalid route response: no features found");
+				console.warn("Invalid route response: no features found");
+				continue;
 			}
 
-			const lineGeom = feature.geometry;
+			const lineGeom = feature.geometry as GeoJSON.LineString;
 
-			// Get distance and duration from feature properties or calculate fallback
+			// Extract distance and duration from feature properties
 			let distance: number;
 			let duration: number;
 
@@ -54,55 +100,127 @@ export async function findRoutes(start: Coordinate, prefs: Prefs) {
 					summary.distance ??
 					turf.length(feature as GeoJSON.Feature, { units: "kilometers" }) *
 						1000;
-				duration = summary.duration ?? distance / (5 / 3.6); // 5km/h default if missing
+				duration =
+					summary.duration ?? distance / (DEFAULT_WALKING_SPEED_KMH / 3.6);
 			} else {
 				distance =
 					turf.length(feature as GeoJSON.Feature, { units: "kilometers" }) *
 					1000;
-				duration = distance / (5 / 3.6); // 5km/h default
+				duration = distance / (DEFAULT_WALKING_SPEED_KMH / 3.6);
 			}
 
-			const bbox = turf.bbox(feature as GeoJSON.Feature);
-			const nearLights = await trafficLightsNearRoute(
-				bbox as [number, number, number, number],
-				lineGeom as GeoJSON.LineString,
-			);
-			const parkAdj = await parkAdjacency(
-				bbox as [number, number, number, number],
-				lineGeom as GeoJSON.LineString,
-			);
+			const bbox = turf.bbox(feature as GeoJSON.Feature) as BoundingBox;
 
-			// score
-			const target = prefs.distanceMeters;
+			// Only fetch traffic lights and parks if features are enabled
+			// This avoids Overpass API rate limiting issues
+			let trafficLights: TrafficLightInfo = { count: 0, positions: [] };
+			let parkAdj = 0;
+
+			if (FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK) {
+				trafficLights = await trafficLightsNearRoute(bbox, lineGeom).catch(
+					(err) => {
+						console.warn("Failed to fetch traffic lights:", err.message);
+						return { count: 0, positions: [] as Coordinate[] };
+					},
+				);
+				// Add delay between requests to avoid rate limiting
+				await sleep(500);
+			}
+
+			if (FEATURES.ENABLE_PARK_ADJACENCY_CHECK) {
+				parkAdj = await parkAdjacency(bbox, lineGeom).catch((err) => {
+					console.warn("Failed to fetch park adjacency:", err.message);
+					return 0;
+				});
+			}
+
+			// Calculate score
+			const target = preferences.distanceMeters;
 			const distancePenalty = Math.min(
 				1,
 				Math.abs(distance - target) / Math.max(1, target),
 			);
-			const score =
-				100 -
-				40 * distancePenalty -
-				25 * prefs.avoidLights * Math.min(1, nearLights.count / 20) +
-				25 * prefs.preferParks * parkAdj +
-				10 * 1; // baseline niceness
 
-			return {
+			// Calculate score based on enabled features
+			let score =
+				100 - DISTANCE_PENALTY_WEIGHT * distancePenalty + BASELINE_SCORE;
+
+			// Add traffic lights penalty if feature is enabled
+			if (FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK) {
+				score -=
+					LIGHTS_PENALTY_WEIGHT *
+					preferences.avoidTrafficLights *
+					Math.min(1, trafficLights.count / MAX_LIGHTS_FOR_PENALTY);
+			}
+
+			// Add park bonus if feature is enabled
+			if (FEATURES.ENABLE_PARK_ADJACENCY_CHECK) {
+				score += PARKS_BONUS_WEIGHT * preferences.preferParks * parkAdj;
+			}
+
+			const routeSummary: RouteSummary = {
 				id: i,
-				geojson: routeData,
-				dist: distance,
-				duration: duration,
-				lights: nearLights.count,
+				geojson: route,
+				distance,
+				duration,
+				trafficLights,
 				parkAdjacency: parkAdj,
 				score: Math.max(0, Math.min(100, score)) / 100,
-				lightsPositions: nearLights.positions,
+				metadata: {
+					seedUsed: SEEDS[i] || 0,
+					generatedAt: new Date(),
+					apiVersion: "1.0.0",
+				},
 			};
-		}),
-	);
 
-	// sort and pick top 3
-	const routes = enriched.sort((a, b) => b.score - a.score).slice(0, 3);
-	return { routes };
-} // --- Helpers ---
+			enriched.push(routeSummary);
+		}
 
+		// Check if we have any valid routes after enrichment
+		if (enriched.length === 0) {
+			throw new Error(
+				"Failed to generate routes. All route candidates were invalid.",
+			);
+		}
+
+		// Sort by score and return top routes
+		const sortedRoutes = enriched
+			.sort((a, b) => b.score - a.score)
+			.slice(0, MAX_ROUTES);
+
+		return {
+			routes: sortedRoutes,
+			metadata: {
+				requestId,
+				processingTimeMs: Date.now() - startTime,
+				apiCalls: SEEDS.length,
+			},
+		};
+	} catch (error) {
+		console.error("Route generation error:", error);
+
+		// Provide user-friendly error messages
+		if (error instanceof Error) {
+			if (error.message.includes("rate limit")) {
+				throw new Error(
+					"OpenStreetMap data service is currently busy. Please wait 30 seconds and try again.",
+				);
+			}
+			if (error.message.includes("quota")) {
+				throw new Error(
+					"Too many requests. Please wait a moment and try again.",
+				);
+			}
+			throw new Error(error.message);
+		}
+
+		throw new Error("An unexpected error occurred while generating routes");
+	}
+}
+
+/**
+ * Generate a round trip route using OpenRouteService
+ */
 async function orsRoundTrip(
 	ors: OpenRouteService,
 	start: Coordinate,
@@ -110,19 +228,19 @@ async function orsRoundTrip(
 	seed: number,
 ): Promise<DirectionsGeoJSONResponse> {
 	try {
-		// Create the request - round_trip is supported by ORS API
+		const profile: Profile = "foot-walking";
 		const request = {
 			coordinates: [start],
 			options: {
 				round_trip: {
-					length: Math.max(800, Math.round(distanceMeters)),
+					length: Math.max(MIN_ROUTE_LENGTH, Math.round(distanceMeters)),
 					seed,
 				},
 			} as Record<string, unknown>,
 		};
 
 		const response = await ors.directions.calculateRouteGeoJSON(
-			"foot-walking",
+			profile,
 			request,
 		);
 		return response;
@@ -132,69 +250,77 @@ async function orsRoundTrip(
 	}
 }
 
+/**
+ * Count traffic lights near the route
+ */
 async function trafficLightsNearRoute(
-	bbox: [number, number, number, number],
-	lineGeom: GeoJSON.Geometry,
-): Promise<TrafficLightResult> {
+	bbox: BoundingBox,
+	lineGeom: GeoJSON.LineString,
+): Promise<TrafficLightInfo> {
 	const [minX, minY, maxX, maxY] = bbox;
 	const query = `
-    [out:json][timeout:25];
+    [out:json][timeout:${OVERPASS_TIMEOUT_SECONDS}];
     node["highway"="traffic_signals"](${minY},${minX},${maxY},${maxX});
     out body;
   `;
-	const r = await overpass(query);
+
+	const response = await overpass(query);
 	const positions: Coordinate[] = [];
 	let count = 0;
-	for (const el of r.elements ?? []) {
+
+	for (const el of response.elements) {
 		if (el.type === "node" && el.lon !== undefined && el.lat !== undefined) {
-			const p = turf.point([el.lon, el.lat]);
-			const d = turf.pointToLineDistance(p, lineGeom as GeoJSON.LineString, {
+			const point = turf.point([el.lon, el.lat]);
+			const distance = turf.pointToLineDistance(point, lineGeom, {
 				units: "meters",
 			});
-			if (d <= 20) {
-				// within 20m of the route line
+
+			if (distance <= LIGHTS_NEAR_DISTANCE_METERS) {
 				count++;
 				positions.push([el.lon, el.lat]);
 			}
 		}
 	}
+
 	return { count, positions };
 }
 
+/**
+ * Calculate park adjacency score (0 to 1)
+ */
 async function parkAdjacency(
-	bbox: [number, number, number, number],
-	lineGeom: GeoJSON.Geometry,
+	bbox: BoundingBox,
+	lineGeom: GeoJSON.LineString,
 ): Promise<number> {
-	// We approximate "runs near/in a park" by sampling along the line and checking
-	// if the sample point is within 40m of any park outline (leisure=park).
 	const [minX, minY, maxX, maxY] = bbox;
 	const query = `
-    [out:json][timeout:25];
+    [out:json][timeout:${OVERPASS_TIMEOUT_SECONDS}];
     (
       way["leisure"="park"](${minY},${minX},${maxY},${maxX});
       relation["leisure"="park"](${minY},${minX},${maxY},${maxX});
     );
     out geom;
   `;
-	const r = await overpass(query);
+
+	const response = await overpass(query);
 	const features: GeoJSON.Feature<GeoJSON.LineString>[] = [];
-	for (const el of r.elements ?? []) {
+
+	for (const el of response.elements) {
 		if (el.type === "way" && el.geometry && el.geometry.length >= 3) {
 			const coords = el.geometry.map((g) => [g.lon, g.lat] as Coordinate);
 			features.push(
 				turf.lineString(coords) as GeoJSON.Feature<GeoJSON.LineString>,
 			);
 		} else if (el.type === "relation" && el.members) {
-			// very rough: collect member ways as polylines
-			const coords =
-				el.members
-					?.filter((m) => m.geometry && m.geometry.length > 0)
-					?.flatMap((m) => {
-						if (m.geometry) {
-							return m.geometry.map((g) => [g.lon, g.lat] as Coordinate);
-						}
-						return [];
-					}) ?? [];
+			const coords = el.members
+				.filter((m) => m.geometry && m.geometry.length > 0)
+				.flatMap((m) => {
+					if (m.geometry) {
+						return m.geometry.map((g) => [g.lon, g.lat] as Coordinate);
+					}
+					return [];
+				});
+
 			if (coords.length >= 3) {
 				features.push(
 					turf.lineString(coords) as GeoJSON.Feature<GeoJSON.LineString>,
@@ -202,36 +328,78 @@ async function parkAdjacency(
 			}
 		}
 	}
+
 	if (!features.length) return 0;
 
-	const line = turf.lineString((lineGeom as GeoJSON.LineString).coordinates);
+	const line = turf.lineString(lineGeom.coordinates);
 	const lineLenM = turf.length(line, { units: "kilometers" }) * 1000;
-	const samples = Math.max(100, Math.min(400, Math.round(lineLenM / 25))); // ~one sample/25m
+	const samples = Math.max(
+		100,
+		Math.min(400, Math.round(lineLenM / PARK_SAMPLE_COUNT_FACTOR)),
+	);
+
 	let hits = 0;
 	for (let i = 0; i <= samples; i++) {
 		const pt = turf.along(line, (lineLenM * (i / samples)) / 1000, {
 			units: "kilometers",
 		});
 		const near = features.some(
-			(f) => turf.pointToLineDistance(pt, f, { units: "meters" }) <= 40,
+			(f) =>
+				turf.pointToLineDistance(pt, f, { units: "meters" }) <=
+				PARK_NEAR_DISTANCE_METERS,
 		);
 		if (near) hits++;
 	}
-	return hits / samples; // 0..1
+
+	return hits / samples;
 }
 
-async function overpass(query: string): Promise<OverpassResponse> {
+/**
+ * Query Overpass API with retry logic
+ */
+async function overpass(query: string, retries = 2): Promise<OverpassResponse> {
 	const body = new URLSearchParams({ data: query }).toString();
-	const res = await fetch("https://overpass-api.de/api/interpreter", {
-		method: "POST",
-		headers: {
-			"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-		},
-		body,
-	});
-	if (!res.ok) {
-		const t = await res.text();
-		throw new Error("Overpass error: " + t);
+
+	for (let attempt = 0; attempt <= retries; attempt++) {
+		try {
+			const res = await fetch("https://overpass-api.de/api/interpreter", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+				},
+				body,
+			});
+
+			if (!res.ok) {
+				const text = await res.text();
+
+				// Check if rate limited
+				if (text.includes("rate_limited") || text.includes("quota")) {
+					if (attempt < retries) {
+						// Wait longer before retry (exponential backoff)
+						const delay = Math.pow(2, attempt) * 1000;
+						console.warn(`Overpass rate limited, retrying in ${delay}ms...`);
+						await sleep(delay);
+						continue;
+					}
+					throw new Error(
+						"Overpass API rate limit exceeded. Please try again in a few moments.",
+					);
+				}
+
+				// Other error
+				throw new Error(`Overpass API error: ${res.status}`);
+			}
+
+			return (await res.json()) as OverpassResponse;
+		} catch (error) {
+			if (attempt === retries) {
+				throw error;
+			}
+			// Wait before retry
+			await sleep(1000);
+		}
 	}
-	return (await res.json()) as OverpassResponse;
+
+	throw new Error("Failed to query Overpass API after retries");
 }
