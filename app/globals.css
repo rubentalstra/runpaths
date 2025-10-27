@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+html, body, #__next { height: 100%; }
+#map { height: 100%; width: 100%; }
+
+/* MapLibre popup + control tweaks */
+.maplibregl-ctrl-top-right { margin-top: 8px; margin-right: 8px; }
+.maplibregl-ctrl-group { box-shadow: 0 8px 20px rgba(0,0,0,0.15); border-radius: 12px; overflow: hidden; }
+
+/* Pretty card */
+.panel {
+  background-color: white;
+  border-radius: 1rem;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+  border: 1px solid rgba(0,0,0,0.05);
+}
