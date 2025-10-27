@@ -32,7 +32,6 @@ export const BASELINE_SCORE = 10;
 
 // Route generation
 export const SEEDS = [11, 22, 33, 44, 55] as const;
-export const MIN_ROUTE_LENGTH = 800;
 export const MAX_ROUTES = 3;
 
 // Traffic lights
@@ -51,6 +50,25 @@ export const DEFAULT_PACE_MIN_PER_KM = 6; // 6 min/km = 10 km/h
 export const MIN_PACE_MIN_PER_KM = 3; // Fast runner: 3 min/km = 20 km/h
 export const MAX_PACE_MIN_PER_KM = 10; // Slow jogger: 10 min/km = 6 km/h
 export const PACE_STEP = 0.25; // 15 seconds
+
+// Colorblind mode
+export const DEFAULT_COLORBLIND_MODE = false;
+
+// Color schemes for routes
+export const ROUTE_COLORS = {
+	default: {
+		primary: "#0077BB", // Blue
+		alternative: "#1D282D", // Dark gray
+		trafficLight: "#DC2626", // Red
+		trafficLightBg: "#FEE2E2", // Light red background
+	},
+	colorblind: {
+		primary: "#0077BB", // Blue (deuteranopia/protanopia safe)
+		alternative: "#555555", // Medium gray
+		trafficLight: "#EE7733", // Orange (safe for most colorblind types)
+		trafficLightBg: "#FFE5D0", // Light orange background
+	},
+} as const;
 
 // Toast configuration
 export const TOAST_DURATION_MS = 5000;

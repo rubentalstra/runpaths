@@ -37,9 +37,12 @@ export const PreferencesSchema = z.object({
 	avoidTrafficLights: z.number().min(0).max(1),
 	preferParks: z.number().min(0).max(1),
 	paceMinPerKm: z.number().min(3).max(10), // 3-10 min/km
+	colorblindMode: z.boolean().optional(),
 });
 
 export type Preferences = z.infer<typeof PreferencesSchema>;
+
+export type ColorScheme = "default" | "colorblind";
 
 export interface RouteGenerationOptions extends Preferences {
 	readonly maxRoutes?: number;

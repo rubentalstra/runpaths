@@ -10,6 +10,7 @@ import {
 	MAP_PADDING,
 	MAP_ANIMATION_DURATION,
 	FEATURES,
+	ROUTE_COLORS,
 } from "@/app/lib/constants";
 
 interface MapProps {
@@ -20,6 +21,7 @@ interface MapProps {
 	readonly onMapClick: (lngLat: Coordinate) => void;
 	readonly initialCenter?: Coordinate | null;
 	readonly isManualLocation?: boolean;
+	readonly colorblindMode?: boolean;
 }
 
 export function MapComponent({
@@ -30,8 +32,14 @@ export function MapComponent({
 	onMapClick,
 	initialCenter,
 	isManualLocation = false,
+	colorblindMode = false,
 }: MapProps) {
 	const mapRef = useRef<MapLibreMap | null>(null);
+
+	// Select color scheme based on colorblind mode
+	const colors = colorblindMode
+		? ROUTE_COLORS.colorblind
+		: ROUTE_COLORS.default;
 
 	// Init map
 	useEffect(() => {
@@ -154,7 +162,7 @@ export function MapComponent({
 			type: "line",
 			source: "route-main",
 			paint: {
-				"line-color": "#DAA442",
+				"line-color": colors.primary,
 				"line-width": 6,
 				"line-opacity": 0.95,
 			},
@@ -173,7 +181,7 @@ export function MapComponent({
 				type: "line",
 				source: sid,
 				paint: {
-					"line-color": "#1D282D",
+					"line-color": colors.alternative,
 					"line-width": 3,
 					"line-opacity": 0.35,
 				},
@@ -204,7 +212,7 @@ export function MapComponent({
 				source: "lights",
 				paint: {
 					"circle-radius": 8,
-					"circle-color": "#FEE2E2",
+					"circle-color": colors.trafficLightBg,
 					"circle-opacity": 0.6,
 				},
 			});
@@ -216,13 +224,13 @@ export function MapComponent({
 				source: "lights",
 				paint: {
 					"circle-radius": 5,
-					"circle-color": "#DC2626",
+					"circle-color": colors.trafficLight,
 					"circle-stroke-color": "#ffffff",
 					"circle-stroke-width": 2,
 				},
 			});
 		}
-	}, [routes, activeRoute]);
+	}, [routes, activeRoute, colors]);
 
 	return <div id={mapId} className="h-full w-full" />;
 }

@@ -25,6 +25,8 @@ interface ControlsProps {
 	readonly setPreferParks: (value: number) => void;
 	readonly pace: number;
 	readonly setPace: (value: number) => void;
+	readonly colorblindMode: boolean;
+	readonly setColorblindMode: (value: boolean) => void;
 	readonly onFindRoutes: () => void;
 	readonly isPending: boolean;
 }
@@ -38,6 +40,8 @@ export function Controls({
 	setPreferParks,
 	pace,
 	setPace,
+	colorblindMode,
+	setColorblindMode,
 	onFindRoutes,
 	isPending,
 }: ControlsProps) {
@@ -45,6 +49,7 @@ export function Controls({
 	const avoidId = useId();
 	const preferId = useId();
 	const paceId = useId();
+	const colorblindId = useId();
 
 	// Format pace display (e.g., "5:30" for 5.5 min/km)
 	const formatPace = (minPerKm: number): string => {
@@ -166,6 +171,36 @@ export function Controls({
 				/>
 				<div className="text-xs text-neutral-500">
 					Faster runners: 3-5 min/km • Casual joggers: 6-8 min/km
+				</div>
+			</div>
+
+			{/* Colorblind Mode Toggle */}
+			<div className="space-y-2 pt-2 border-t border-neutral-200">
+				<div className="flex items-center justify-between">
+					<label htmlFor={colorblindId} className="text-sm font-medium">
+						Colorblind-friendly mode
+					</label>
+					<button
+						id={colorblindId}
+						type="button"
+						role="switch"
+						aria-checked={colorblindMode}
+						onClick={() => setColorblindMode(!colorblindMode)}
+						className={cn(
+							"relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+							colorblindMode ? "bg-blue-600" : "bg-neutral-300",
+						)}
+					>
+						<span
+							className={cn(
+								"inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+								colorblindMode ? "translate-x-6" : "translate-x-1",
+							)}
+						/>
+					</button>
+				</div>
+				<div className="text-xs text-neutral-500">
+					Uses blue/orange colors safer for color vision deficiencies
 				</div>
 			</div>
 

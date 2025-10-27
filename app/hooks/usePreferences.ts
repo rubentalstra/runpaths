@@ -7,6 +7,7 @@ import {
 	DEFAULT_AVOID_LIGHTS,
 	DEFAULT_PREFER_PARKS,
 	DEFAULT_PACE_MIN_PER_KM,
+	DEFAULT_COLORBLIND_MODE,
 	MIN_DISTANCE_KM,
 	MAX_DISTANCE_KM,
 	MIN_PREFERENCE,
@@ -22,6 +23,7 @@ interface UsePreferencesReturn {
 	updateAvoidTrafficLights: (value: number) => void;
 	updatePreferParks: (value: number) => void;
 	updatePace: (minPerKm: number) => void;
+	updateColorblindMode: (enabled: boolean) => void;
 	resetToDefaults: () => void;
 }
 
@@ -31,6 +33,7 @@ export function usePreferences(): UsePreferencesReturn {
 		avoidTrafficLights: DEFAULT_AVOID_LIGHTS,
 		preferParks: DEFAULT_PREFER_PARKS,
 		paceMinPerKm: DEFAULT_PACE_MIN_PER_KM,
+		colorblindMode: DEFAULT_COLORBLIND_MODE,
 	});
 
 	const updateDistance = useCallback((km: number) => {
@@ -69,12 +72,20 @@ export function usePreferences(): UsePreferencesReturn {
 		}));
 	}, []);
 
+	const updateColorblindMode = useCallback((enabled: boolean) => {
+		setPreferences((prev) => ({
+			...prev,
+			colorblindMode: enabled,
+		}));
+	}, []);
+
 	const resetToDefaults = useCallback(() => {
 		setPreferences({
 			distanceMeters: DEFAULT_DISTANCE_KM * 1000,
 			avoidTrafficLights: DEFAULT_AVOID_LIGHTS,
 			preferParks: DEFAULT_PREFER_PARKS,
 			paceMinPerKm: DEFAULT_PACE_MIN_PER_KM,
+			colorblindMode: DEFAULT_COLORBLIND_MODE,
 		});
 	}, []);
 
@@ -84,6 +95,7 @@ export function usePreferences(): UsePreferencesReturn {
 		updateAvoidTrafficLights,
 		updatePreferParks,
 		updatePace,
+		updateColorblindMode,
 		resetToDefaults,
 	};
 }

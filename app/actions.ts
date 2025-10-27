@@ -17,7 +17,6 @@ import type {
 } from "./lib/types";
 import {
 	SEEDS,
-	MIN_ROUTE_LENGTH,
 	MAX_ROUTES,
 	PARK_NEAR_DISTANCE_METERS,
 	PARK_SAMPLE_COUNT_FACTOR,
@@ -218,6 +217,7 @@ export async function findRoutes(
 
 /**
  * Generate a round trip route using OpenRouteService
+ * Creates more circular routes by adjusting the round_trip parameters
  */
 async function orsRoundTrip(
 	ors: OpenRouteService,
@@ -231,7 +231,7 @@ async function orsRoundTrip(
 			coordinates: [start],
 			options: {
 				round_trip: {
-					length: Math.max(MIN_ROUTE_LENGTH, Math.round(distanceMeters)),
+					length: Math.round(distanceMeters),
 					seed,
 				},
 			} as Record<string, unknown>,

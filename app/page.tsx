@@ -19,6 +19,7 @@ import { CitySearch } from "@/components/CitySearch";
 import { ToastContainer } from "@/components/Toast";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorFallback } from "@/components/ui/ErrorFallback";
+import { FEATURES, ROUTE_COLORS } from "./lib/constants";
 
 function HomePage() {
 	const mapId = useId();
@@ -45,6 +46,7 @@ function HomePage() {
 		updateAvoidTrafficLights,
 		updatePreferParks,
 		updatePace,
+		updateColorblindMode,
 	} = usePreferences();
 
 	// Ensure component is mounted (client-side only)
@@ -163,6 +165,7 @@ function HomePage() {
 					onMapClick={handleMapClick}
 					initialCenter={currentCoordinate}
 					isManualLocation={manualCoordinate !== null}
+					colorblindMode={preferences.colorblindMode || false}
 				/>
 			</Suspense>
 
@@ -206,6 +209,8 @@ function HomePage() {
 				setPreferParks={updatePreferParks}
 				pace={preferences.paceMinPerKm}
 				setPace={updatePace}
+				colorblindMode={preferences.colorblindMode || false}
+				setColorblindMode={updateColorblindMode}
 				onFindRoutes={handleFindRoutes}
 				isPending={isLoading}
 			/>
@@ -224,13 +229,30 @@ function HomePage() {
 					<div className="fixed bottom-24 right-4 z-20 panel px-3 py-2 text-xs space-y-1">
 						<div className="font-semibold text-neutral-700 mb-1">Legend</div>
 						<div className="flex items-center gap-2">
-							<div className="w-4 h-1 bg-[#DAA442] rounded"></div>
+							<div
+								className="w-4 h-1 rounded"
+								style={{
+									backgroundColor: preferences.colorblindMode
+										? ROUTE_COLORS.colorblind.primary
+										: ROUTE_COLORS.default.primary,
+								}}
+							></div>
 							<span className="text-neutral-600">Your route</span>
 						</div>
-						<div className="flex items-center gap-2">
-							<div className="w-3 h-3 rounded-full bg-red-600 border-2 border-white"></div>
-							<span className="text-neutral-600">Traffic lights (OSM)</span>
-						</div>
+						{/* only show when traffic lights are enabled */}
+						{FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK && (
+							<div className="flex items-center gap-2">
+								<div
+									className="w-3 h-3 rounded-full border-2 border-white"
+									style={{
+										backgroundColor: preferences.colorblindMode
+											? ROUTE_COLORS.colorblind.trafficLight
+											: ROUTE_COLORS.default.trafficLight,
+									}}
+								></div>
+								<span className="text-neutral-600">Traffic lights (OSM)</span>
+							</div>
+						)}
 					</div>
 				</>
 			)}
