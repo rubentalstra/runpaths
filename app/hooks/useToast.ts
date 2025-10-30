@@ -5,6 +5,9 @@ import type { Toast, ToastType } from "../lib/types";
 import { generateId } from "../lib/utils";
 import { TOAST_DURATION_MS, MAX_TOASTS } from "../lib/constants";
 
+/**
+ * Return type for useToast hook.
+ */
 interface UseToastReturn {
 	toasts: Toast[];
 	addToast: (message: string, type?: ToastType, duration?: number) => string;
@@ -12,12 +15,19 @@ interface UseToastReturn {
 	clearAllToasts: () => void;
 }
 
+/**
+ * Hook for managing toast notifications.
+ *
+ * Provides functionality to add, remove, and clear toast notifications
+ * with automatic timeout management and maximum toast limiting.
+ *
+ * @returns Toast state and control functions
+ */
 export function useToast(): UseToastReturn {
 	const [toasts, setToasts] = useState<Toast[]>([]);
 	const timeoutsRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
 	const removeToast = useCallback((id: string) => {
-		// Clear timeout if it exists
 		const timeout = timeoutsRef.current.get(id);
 		if (timeout) {
 			clearTimeout(timeout);
@@ -40,10 +50,8 @@ export function useToast(): UseToastReturn {
 
 			setToasts((prev) => {
 				const newToasts = [toast, ...prev];
-				// Limit number of toasts
 				if (newToasts.length > MAX_TOASTS) {
 					const removedToasts = newToasts.slice(MAX_TOASTS);
-					// Clear timeouts for removed toasts
 					removedToasts.forEach((removedToast) => {
 						const timeout = timeoutsRef.current.get(removedToast.id);
 						if (timeout) {
@@ -56,7 +64,6 @@ export function useToast(): UseToastReturn {
 				return newToasts;
 			});
 
-			// Set timeout for auto-removal
 			if (toast.duration && toast.duration > 0) {
 				const timeout = setTimeout(() => {
 					removeToast(id);
@@ -70,7 +77,6 @@ export function useToast(): UseToastReturn {
 	);
 
 	const clearAllToasts = useCallback(() => {
-		// Clear all timeouts
 		timeoutsRef.current.forEach((timeout) => {
 			clearTimeout(timeout);
 		});

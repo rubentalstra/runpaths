@@ -16,6 +16,9 @@ import {
 	FEATURES,
 } from "@/app/lib/constants";
 
+/**
+ * Props for the Controls component.
+ */
 interface ControlsProps {
 	readonly kms: number;
 	readonly setKms: (value: number) => void;
@@ -31,6 +34,14 @@ interface ControlsProps {
 	readonly isPending: boolean;
 }
 
+/**
+ * Controls panel for route preferences and generation.
+ *
+ * Displays sliders and inputs for distance, traffic light avoidance,
+ * park preference, running pace, and colorblind mode settings.
+ *
+ * @param props - Component properties
+ */
 export function Controls({
 	kms,
 	setKms,
@@ -51,7 +62,6 @@ export function Controls({
 	const paceId = useId();
 	const colorblindId = useId();
 
-	// Format pace display (e.g., "5:30" for 5.5 min/km)
 	const formatPace = (minPerKm: number): string => {
 		const minutes = Math.floor(minPerKm);
 		const seconds = Math.round((minPerKm - minutes) * 60);
@@ -62,7 +72,6 @@ export function Controls({
 		<div className="fixed left-4 top-1/2 -translate-y-1/2 w-[360px] max-w-[90vw] z-20 panel p-4 space-y-4">
 			<h2 className="text-lg font-semibold text-brand">Plan your Run</h2>
 
-			{/* Distance control */}
 			<div className="space-y-1">
 				<label htmlFor={distanceId} className="text-sm font-medium block">
 					Target distance: <span className="text-brand-accent">{kms} km</span>
@@ -98,7 +107,6 @@ export function Controls({
 				</div>
 			</div>
 
-			{/* Avoid Traffic Lights - Only show if feature is enabled */}
 			{FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK && (
 				<div className="space-y-2">
 					<div className="flex justify-between">
@@ -123,7 +131,6 @@ export function Controls({
 				</div>
 			)}
 
-			{/* Prefer Parks - Only show if feature is enabled */}
 			{FEATURES.ENABLE_PARK_ADJACENCY_CHECK && (
 				<div className="space-y-2">
 					<div className="flex justify-between">
@@ -148,7 +155,6 @@ export function Controls({
 				</div>
 			)}
 
-			{/* Running Pace */}
 			<div className="space-y-2">
 				<div className="flex justify-between">
 					<label htmlFor={paceId} className="text-sm font-medium">
@@ -174,7 +180,6 @@ export function Controls({
 				</div>
 			</div>
 
-			{/* Colorblind Mode Toggle */}
 			<div className="space-y-2 pt-2 border-t border-neutral-200">
 				<div className="flex items-center justify-between">
 					<label htmlFor={colorblindId} className="text-sm font-medium">
@@ -204,7 +209,6 @@ export function Controls({
 				</div>
 			</div>
 
-			{/* Find routes button */}
 			<button
 				type="button"
 				onClick={onFindRoutes}
@@ -220,10 +224,9 @@ export function Controls({
 				{isPending ? "Finding routes..." : "Find routes"}
 			</button>
 
-			{/* Attribution */}
 			<div className="text-xs text-neutral-500 leading-relaxed">
-				Tiles © OpenStreetMap contributors. Routing by OpenRouteService. Data
-				via Overpass API.
+				Tiles &copy; OpenStreetMap contributors. Routing by OpenRouteService.
+				Data via Overpass API.
 			</div>
 		</div>
 	);

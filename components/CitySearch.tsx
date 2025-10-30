@@ -5,11 +5,22 @@ import type { Coordinate } from "ors-client";
 import type { NominatimResult } from "@/app/lib/types";
 import { cn } from "@/app/lib/utils";
 
+/**
+ * Props for the CitySearch component.
+ */
 interface CitySearchProps {
 	readonly onCitySelect: (lngLat: Coordinate, cityName: string) => void;
 	readonly isVisible: boolean;
 }
 
+/**
+ * City search component using Nominatim geocoding API.
+ *
+ * Allows users to search for cities when geolocation is unavailable or denied.
+ * Displays search results with city names and addresses.
+ *
+ * @param props - Component properties
+ */
 export function CitySearch({ onCitySelect, isVisible }: CitySearchProps) {
 	const [query, setQuery] = useState("");
 	const [results, setResults] = useState<NominatimResult[]>([]);

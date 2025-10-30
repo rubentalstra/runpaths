@@ -1,8 +1,19 @@
+/**
+ * Props for the ErrorFallback component.
+ */
 interface ErrorFallbackProps {
 	readonly error: Error;
 	readonly resetErrorBoundary: () => void;
 }
 
+/**
+ * Error fallback UI for error boundary.
+ *
+ * Displays a user-friendly error message with details and recovery options.
+ * Provides buttons to retry or refresh the page.
+ *
+ * @param props - Component properties
+ */
 export function ErrorFallback({
 	error,
 	resetErrorBoundary,

@@ -2,6 +2,9 @@ import type { Metadata, Viewport } from "next";
 
 import "./globals.css";
 
+/**
+ * Application metadata for SEO and social media sharing.
+ */
 export const metadata: Metadata = {
 	title: {
 		default: "RunPaths - Find Beautiful Running Routes",
@@ -42,6 +45,9 @@ export const metadata: Metadata = {
 	},
 };
 
+/**
+ * Viewport configuration for responsive design.
+ */
 export const viewport: Viewport = {
 	width: "device-width",
 	initialScale: 1,
@@ -53,6 +59,13 @@ export const viewport: Viewport = {
 	],
 };
 
+/**
+ * Root layout component for the application.
+ *
+ * Sets up the HTML structure and applies global styles.
+ *
+ * @param children - Child components to render
+ */
 export default function RootLayout({
 	children,
 }: Readonly<{

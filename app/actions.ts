@@ -31,14 +31,18 @@ import {
 } from "./lib/constants";
 import { generateId, sleep } from "./lib/utils";
 
-// Convert pace to speed for fallback calculations (km/h)
 const DEFAULT_SPEED_KMH = 60 / DEFAULT_PACE_MIN_PER_KM;
 
 /**
- * Server action to find running routes based on preferences
+ * Server action to find running routes based on user preferences.
+ *
+ * Generates multiple route candidates using different seeds, enriches them with
+ * traffic light and park adjacency data, scores them, and returns the top routes.
+ *
  * @param start - Starting coordinate [longitude, latitude]
- * @param preferences - User preferences for route generation
- * @returns Route generation response with routes and metadata
+ * @param preferences - User preferences for route generation (distance, traffic lights, parks, pace)
+ * @returns Route generation response containing sorted routes with metadata
+ * @throws {Error} When ORS API key is missing or route generation fails
  */
 export async function findRoutes(
 	start: Coordinate,
@@ -55,7 +59,6 @@ export async function findRoutes(
 
 		const ors = new OpenRouteService({ apiKey });
 
-		// Generate multiple route candidates with different seeds
 		const candidates = (
 			await Promise.allSettled(
 				SEEDS.map((seed) =>
@@ -68,8 +71,6 @@ export async function findRoutes(
 			throw new Error("Failed to generate any routes. Please try again.");
 		}
 
-		// Enrich routes with traffic lights and park adjacency data
-		// Process sequentially to avoid rate limiting
 		const enriched: RouteSummary[] = [];
 
 		for (let i = 0; i < candidates.length; i++) {
@@ -84,7 +85,6 @@ export async function findRoutes(
 
 			const lineGeom = feature.geometry as GeoJSON.LineString;
 
-			// Extract distance and duration from feature properties
 			let distance: number;
 			let duration: number;
 
@@ -111,7 +111,6 @@ export async function findRoutes(
 
 			const bbox = turf.bbox(feature as GeoJSON.Feature) as BoundingBox;
 
-			// Calculate traffic lights and parks if features are enabled
 			let trafficLights: TrafficLightInfo = { count: 0, positions: [] };
 			let parkAdj = 0;
 
@@ -131,18 +130,15 @@ export async function findRoutes(
 				});
 			}
 
-			// Calculate score
 			const target = preferences.distanceMeters;
 			const distancePenalty = Math.min(
 				1,
 				Math.abs(distance - target) / Math.max(1, target),
 			);
 
-			// Calculate score based on enabled features
 			let score =
 				100 - DISTANCE_PENALTY_WEIGHT * distancePenalty + BASELINE_SCORE;
 
-			// Add traffic lights penalty if feature is enabled
 			if (FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK) {
 				score -=
 					LIGHTS_PENALTY_WEIGHT *
@@ -150,7 +146,6 @@ export async function findRoutes(
 					Math.min(1, trafficLights.count / MAX_LIGHTS_FOR_PENALTY);
 			}
 
-			// Add park bonus if feature is enabled
 			if (FEATURES.ENABLE_PARK_ADJACENCY_CHECK) {
 				score += PARKS_BONUS_WEIGHT * preferences.preferParks * parkAdj;
 			}
@@ -173,14 +168,12 @@ export async function findRoutes(
 			enriched.push(routeSummary);
 		}
 
-		// Check if we have any valid routes after enrichment
 		if (enriched.length === 0) {
 			throw new Error(
 				"Failed to generate routes. All route candidates were invalid.",
 			);
 		}
 
-		// Sort by score and return top routes
 		const sortedRoutes = enriched
 			.sort((a, b) => b.score - a.score)
 			.slice(0, MAX_ROUTES);
@@ -196,7 +189,6 @@ export async function findRoutes(
 	} catch (error) {
 		console.error("Route generation error:", error);
 
-		// Provide user-friendly error messages
 		if (error instanceof Error) {
 			if (error.message.includes("rate limit")) {
 				throw new Error(
@@ -216,8 +208,14 @@ export async function findRoutes(
 }
 
 /**
- * Generate a round trip route using OpenRouteService
- * Creates more circular routes by adjusting the round_trip parameters
+ * Generates a round trip route using OpenRouteService API.
+ *
+ * @param ors - OpenRouteService instance
+ * @param start - Starting coordinate [longitude, latitude]
+ * @param distanceMeters - Target distance in meters
+ * @param seed - Seed for route variation
+ * @returns GeoJSON response containing the route
+ * @throws {Error} When ORS API call fails
  */
 async function orsRoundTrip(
 	ors: OpenRouteService,
@@ -249,8 +247,14 @@ async function orsRoundTrip(
 }
 
 /**
- * Fetch real traffic lights from OpenStreetMap using a simple query
- * Uses OSM's API with quick fallback to heuristics if unavailable
+ * Fetches traffic light locations near a route from OpenStreetMap.
+ *
+ * Uses OSM's XML API to retrieve traffic signals within the route's bounding box.
+ * Falls back to heuristic estimation if the API is unavailable or the bbox is too large.
+ *
+ * @param bbox - Bounding box [minX, minY, maxX, maxY]
+ * @param lineGeom - Route geometry as GeoJSON LineString
+ * @returns Traffic light information with count and positions
  */
 async function trafficLightsNearRoute(
 	bbox: BoundingBox,
@@ -258,23 +262,19 @@ async function trafficLightsNearRoute(
 ): Promise<TrafficLightInfo> {
 	const [minX, minY, maxX, maxY] = bbox;
 
-	// Calculate bbox size - if too large, skip API call
 	const bboxWidth = maxX - minX;
 	const bboxHeight = maxY - minY;
 
-	// Only query OSM if bbox is reasonable (< 0.05 degrees ~5km)
 	if (bboxWidth > 0.05 || bboxHeight > 0.05) {
 		console.log("Bbox too large for OSM API, using heuristic");
 		return fallbackTrafficLightEstimate(lineGeom);
 	}
 
 	try {
-		// Use OSM's simpler API endpoint for traffic signals
-		// Format: bbox=left,bottom,right,top (minX,minY,maxX,maxY)
 		const osmUrl = `https://www.openstreetmap.org/api/0.6/map?bbox=${minX},${minY},${maxX},${maxY}`;
 
 		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+		const timeoutId = setTimeout(() => controller.abort(), 3000);
 
 		const response = await fetch(osmUrl, {
 			signal: controller.signal,
@@ -292,8 +292,6 @@ async function trafficLightsNearRoute(
 
 		const xmlText = await response.text();
 
-		// Parse XML to find traffic signals
-		// Traffic signals in OSM have tag: highway=traffic_signals
 		const trafficLightRegex =
 			/<node[^>]*id="(\d+)"[^>]*lat="([^"]+)"[^>]*lon="([^"]+)"[^>]*>[\s\S]*?<tag k="highway" v="traffic_signals"\/>/g;
 
@@ -305,13 +303,11 @@ async function trafficLightsNearRoute(
 			const lon = parseFloat(match[3]);
 			const lat = parseFloat(match[2]);
 
-			// Check if this traffic light is near our route
 			const point = turf.point([lon, lat]);
 			const distance = turf.pointToLineDistance(point, lineGeom, {
 				units: "meters",
 			});
 
-			// Only include if within 30 meters of the route
 			if (distance <= 30) {
 				positions.push([lon, lat]);
 			}
@@ -326,14 +322,19 @@ async function trafficLightsNearRoute(
 			positions: positions,
 		};
 	} catch (fetchError) {
-		// If API fails, fall back to heuristic approach
 		console.warn("OSM API failed, using heuristic:", fetchError);
 		return fallbackTrafficLightEstimate(lineGeom);
 	}
 }
 
 /**
- * Fallback heuristic when API is unavailable
+ * Estimates traffic light locations using bearing changes as a heuristic.
+ *
+ * Significant direction changes (>30 degrees) often indicate intersections
+ * where traffic lights may be present.
+ *
+ * @param lineGeom - Route geometry as GeoJSON LineString
+ * @returns Estimated traffic light information
  */
 function fallbackTrafficLightEstimate(
 	lineGeom: GeoJSON.LineString,
@@ -369,7 +370,14 @@ function fallbackTrafficLightEstimate(
 }
 
 /**
- * Calculate park adjacency score (0 to 1)
+ * Calculates park adjacency score for a route.
+ *
+ * Queries Overpass API for parks within the route's bounding box, then samples
+ * points along the route to determine what percentage is near a park.
+ *
+ * @param bbox - Bounding box [minX, minY, maxX, maxY]
+ * @param lineGeom - Route geometry as GeoJSON LineString
+ * @returns Park adjacency score from 0 to 1
  */
 async function parkAdjacency(
 	bbox: BoundingBox,
@@ -438,7 +446,12 @@ async function parkAdjacency(
 }
 
 /**
- * Query Overpass API with retry logic
+ * Queries Overpass API with retry logic and exponential backoff.
+ *
+ * @param query - Overpass QL query string
+ * @param retries - Number of retry attempts (default: 2)
+ * @returns Overpass API response
+ * @throws {Error} When API call fails after all retries
  */
 async function overpass(query: string, retries = 2): Promise<OverpassResponse> {
 	const body = new URLSearchParams({ data: query }).toString();
@@ -456,10 +469,8 @@ async function overpass(query: string, retries = 2): Promise<OverpassResponse> {
 			if (!res.ok) {
 				const text = await res.text();
 
-				// Check if rate limited
 				if (text.includes("rate_limited") || text.includes("quota")) {
 					if (attempt < retries) {
-						// Wait longer before retry (exponential backoff)
 						const delay = Math.pow(2, attempt) * 1000;
 						console.warn(`Overpass rate limited, retrying in ${delay}ms...`);
 						await sleep(delay);
@@ -470,7 +481,6 @@ async function overpass(query: string, retries = 2): Promise<OverpassResponse> {
 					);
 				}
 
-				// Other error
 				throw new Error(`Overpass API error: ${res.status}`);
 			}
 
@@ -479,7 +489,6 @@ async function overpass(query: string, retries = 2): Promise<OverpassResponse> {
 			if (attempt === retries) {
 				throw error;
 			}
-			// Wait before retry
 			await sleep(1000);
 		}
 	}

@@ -13,6 +13,9 @@ import {
 } from "../lib/constants";
 import { isBrowser } from "../lib/utils";
 
+/**
+ * Return type for useGeolocation hook.
+ */
 interface UseGeolocationReturn {
 	location: GeolocationResult | null;
 	error: CustomGeolocationError | null;
@@ -22,6 +25,15 @@ interface UseGeolocationReturn {
 	isSupported: boolean;
 }
 
+/**
+ * Hook for managing browser geolocation.
+ *
+ * Automatically requests location on mount if geolocation is supported.
+ * Provides methods to manually request location and clear errors.
+ *
+ * @param options - Geolocation options (timeout, accuracy, etc.)
+ * @returns Geolocation state and control functions
+ */
 export function useGeolocation(
 	options: GeolocationOptions = {},
 ): UseGeolocationReturn {
@@ -105,7 +117,6 @@ export function useGeolocation(
 		);
 	}, [isSupported, options]);
 
-	// Auto-request location on mount if supported
 	useEffect(() => {
 		if (isSupported && state === "idle") {
 			requestLocation();

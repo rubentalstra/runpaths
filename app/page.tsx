@@ -21,6 +21,12 @@ import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorFallback } from "@/components/ui/ErrorFallback";
 import { FEATURES, ROUTE_COLORS } from "./lib/constants";
 
+/**
+ * Main application component for the RunPaths route finder.
+ *
+ * Manages user location (geolocation or manual), route generation preferences,
+ * and displays the map with generated running routes.
+ */
 function HomePage() {
 	const mapId = useId();
 	const [isMounted, setIsMounted] = useState(false);
@@ -28,7 +34,6 @@ function HomePage() {
 		null,
 	);
 
-	// Custom hooks for state management
 	const { location, state: locationState, isSupported } = useGeolocation();
 	const { toasts, addToast, removeToast } = useToast();
 	const {
@@ -49,20 +54,16 @@ function HomePage() {
 		updateColorblindMode,
 	} = usePreferences();
 
-	// Ensure component is mounted (client-side only)
 	useEffect(() => {
 		setIsMounted(true);
 	}, []);
 
-	// Current coordinate: prioritize manual selection over geolocation
 	const currentCoordinate = manualCoordinate || location?.coordinate || null;
 
-	// Show city search when geolocation fails or is denied (only after mount)
 	const showCitySearch =
 		isMounted &&
 		(!isSupported || locationState === "denied" || locationState === "error");
 
-	// Handle route generation
 	const handleFindRoutes = useCallback(async () => {
 		if (!currentCoordinate) {
 			addToast("Please set your starting location first.", "error");
@@ -94,7 +95,6 @@ function HomePage() {
 		routes.length,
 	]);
 
-	// Handle city selection from search
 	const handleCitySelect = useCallback(
 		(coordinate: Coordinate, cityName: string) => {
 			setManualCoordinate(coordinate);
@@ -106,7 +106,6 @@ function HomePage() {
 		[addToast],
 	);
 
-	// Handle map click for manual coordinate selection
 	const handleMapClick = useCallback(
 		(coordinate: Coordinate) => {
 			setManualCoordinate(coordinate);
@@ -118,7 +117,6 @@ function HomePage() {
 		[addToast],
 	);
 
-	// Reset to geolocation
 	const handleResetToGeolocation = useCallback(() => {
 		setManualCoordinate(null);
 		if (location?.coordinate) {
@@ -131,7 +129,6 @@ function HomePage() {
 		}
 	}, [location, addToast]);
 
-	// Get status message for top bar
 	const statusMessage = useMemo(() => {
 		if (locationState === "loading" && !manualCoordinate) {
 			return "Getting your location...";
@@ -169,7 +166,6 @@ function HomePage() {
 				/>
 			</Suspense>
 
-			{/* Top status bar */}
 			<div className="fixed top-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 panel flex items-center gap-3 max-w-[90vw]">
 				<div className="font-semibold text-brand">RunPaths</div>
 				<span className="text-sm text-neutral-600 truncate">
@@ -187,7 +183,6 @@ function HomePage() {
 				)}
 			</div>
 
-			{/* Helpful instruction tooltip - only show when no routes yet */}
 			{!currentCoordinate && routes.length === 0 && (
 				<div className="fixed top-20 left-1/2 -translate-x-1/2 z-10 px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg shadow-sm max-w-[90vw] animate-fade-in">
 					<p className="text-sm text-blue-800 text-center">
@@ -196,10 +191,8 @@ function HomePage() {
 				</div>
 			)}
 
-			{/* City search modal */}
 			<CitySearch isVisible={showCitySearch} onCitySelect={handleCitySelect} />
 
-			{/* Controls panel */}
 			<Controls
 				kms={preferences.distanceMeters / 1000}
 				setKms={updateDistance}
@@ -215,7 +208,6 @@ function HomePage() {
 				isPending={isLoading}
 			/>
 
-			{/* Route statistics */}
 			{routes.length > 0 && (
 				<>
 					<RouteStats
@@ -225,7 +217,6 @@ function HomePage() {
 						paceMinPerKm={preferences.paceMinPerKm}
 					/>
 
-					{/* Map Legend - Show when routes are displayed */}
 					<div className="fixed bottom-24 right-4 z-20 panel px-3 py-2 text-xs space-y-1">
 						<div className="font-semibold text-neutral-700 mb-1">Legend</div>
 						<div className="flex items-center gap-2">
@@ -239,7 +230,6 @@ function HomePage() {
 							></div>
 							<span className="text-neutral-600">Your route</span>
 						</div>
-						{/* only show when traffic lights are enabled */}
 						{FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK && (
 							<div className="flex items-center gap-2">
 								<div
@@ -257,10 +247,8 @@ function HomePage() {
 				</>
 			)}
 
-			{/* Toast notifications */}
 			<ToastContainer toasts={toasts} removeToast={removeToast} />
 
-			{/* Route generation error display */}
 			{error && (
 				<div className="fixed top-20 left-1/2 -translate-x-1/2 z-20 max-w-md">
 					<div className="bg-red-50 border border-red-200 rounded-lg p-4 animate-slide-up">
@@ -274,7 +262,7 @@ function HomePage() {
 								className="ml-auto text-red-400 hover:text-red-600 text-xl leading-none"
 								aria-label="Dismiss error"
 							>
-								×
+								x
 							</button>
 						</div>
 						<p className="text-red-700 text-sm mt-1">{error}</p>
@@ -285,6 +273,12 @@ function HomePage() {
 	);
 }
 
+/**
+ * Root page component with error boundary.
+ *
+ * Wraps the main application in an error boundary to gracefully handle
+ * unexpected errors and provide a fallback UI.
+ */
 export default function Page() {
 	return (
 		<ErrorBoundary FallbackComponent={ErrorFallback}>

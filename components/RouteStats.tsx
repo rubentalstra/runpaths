@@ -5,6 +5,9 @@ import type { RouteSummary } from "@/app/lib/types";
 import { formatDistance, formatDuration } from "@/app/lib/utils";
 import { FEATURES } from "@/app/lib/constants";
 
+/**
+ * Props for the RouteStats component.
+ */
 interface RouteStatsProps {
 	readonly routes: readonly RouteSummary[];
 	readonly activeRoute: number | null;
@@ -12,6 +15,14 @@ interface RouteStatsProps {
 	readonly paceMinPerKm: number;
 }
 
+/**
+ * Displays statistics for generated routes.
+ *
+ * Shows distance, estimated time, traffic lights, park adjacency,
+ * and score for the active route. Provides buttons to switch between routes.
+ *
+ * @param props - Component properties
+ */
 export function RouteStats({
 	routes,
 	activeRoute,
@@ -76,6 +87,11 @@ export function RouteStats({
 	);
 }
 
+/**
+ * Individual statistic display component.
+ *
+ * @param props - Stat properties (label, value, optional suffix)
+ */
 function Stat({
 	label,
 	value,

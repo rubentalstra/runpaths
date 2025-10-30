@@ -13,6 +13,9 @@ import {
 	ROUTE_COLORS,
 } from "@/app/lib/constants";
 
+/**
+ * Props for the MapComponent.
+ */
 interface MapProps {
 	readonly mapId: string;
 	readonly start: Coordinate | null;
@@ -24,6 +27,14 @@ interface MapProps {
 	readonly colorblindMode?: boolean;
 }
 
+/**
+ * Interactive map component using MapLibre GL.
+ *
+ * Displays running routes, start location markers, and traffic lights.
+ * Supports colorblind-friendly mode and automatic route fitting.
+ *
+ * @param props - Component properties
+ */
 export function MapComponent({
 	mapId,
 	start,
@@ -36,12 +47,10 @@ export function MapComponent({
 }: MapProps) {
 	const mapRef = useRef<MapLibreMap | null>(null);
 
-	// Select color scheme based on colorblind mode
 	const colors = colorblindMode
 		? ROUTE_COLORS.colorblind
 		: ROUTE_COLORS.default;
 
-	// Init map
 	useEffect(() => {
 		const center = initialCenter || DEFAULT_MAP_CENTER;
 		const map = new maplibregl.Map({
@@ -64,7 +73,6 @@ export function MapComponent({
 		});
 		map.addControl(new maplibregl.NavigationControl({}), "top-right");
 
-		// Add crosshair cursor when hovering over the map
 		map.getCanvas().style.cursor = "crosshair";
 
 		map.on("click", (e) => {
@@ -75,16 +83,13 @@ export function MapComponent({
 		return () => map.remove();
 	}, [mapId, onMapClick, initialCenter]);
 
-	// start marker
 	useEffect(() => {
 		const map = mapRef.current;
 		if (!map || !start) return;
 
 		const el = document.createElement("div");
 
-		// Different styling for manual vs geolocation
 		if (isManualLocation) {
-			// Manual location: larger pin-style marker
 			el.innerHTML = `
 				<svg width="24" height="32" viewBox="0 0 24 32" fill="none" xmlns="http://www.w3.org/2000/svg">
 					<path d="M12 0C5.4 0 0 5.4 0 12c0 7.2 12 20 12 20s12-12.8 12-20c0-6.6-5.4-12-12-12z" fill="#3B82F6"/>
@@ -94,7 +99,6 @@ export function MapComponent({
 			el.style.cursor = "pointer";
 			el.title = "Manual start location (click map to change)";
 		} else {
-			// Geolocation: original circle marker
 			el.className = "rounded-full border-4 border-brand-accent bg-white";
 			el.style.width = "18px";
 			el.style.height = "18px";
@@ -113,11 +117,9 @@ export function MapComponent({
 		};
 	}, [start, isManualLocation]);
 
-	// Draw routes
 	useEffect(() => {
 		const map = mapRef.current;
 		if (!map) return;
-		// Remove previous sources/layers
 		const ids = [
 			"route-main",
 			"route-alt-1",
@@ -132,7 +134,6 @@ export function MapComponent({
 		if (!routes.length) return;
 
 		const primary = routes[activeRoute ?? 0] ?? routes[0];
-		// Fit bounds
 		try {
 			const coords = (
 				primary.geojson.features[0].geometry as GeoJSON.LineString
@@ -152,7 +153,6 @@ export function MapComponent({
 			);
 		} catch {}
 
-		// Primary route
 		map.addSource("route-main", {
 			type: "geojson",
 			data: primary.geojson as GeoJSON.FeatureCollection,
@@ -168,7 +168,6 @@ export function MapComponent({
 			},
 		});
 
-		// Alternatives
 		const alts = routes.filter((r) => r.id !== primary.id).slice(0, 2);
 		alts.forEach((r, i) => {
 			const sid = `route-alt-${i + 1}`;
@@ -188,7 +187,6 @@ export function MapComponent({
 			});
 		});
 
-		// Traffic lights near route - only render if feature is enabled
 		if (
 			FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK &&
 			primary.trafficLights.positions.length > 0
@@ -205,7 +203,6 @@ export function MapComponent({
 				} as GeoJSON.FeatureCollection,
 			});
 
-			// Add a subtle circle background
 			map.addLayer({
 				id: "lights-background",
 				type: "circle",
@@ -217,7 +214,6 @@ export function MapComponent({
 				},
 			});
 
-			// Add the main traffic light indicator
 			map.addLayer({
 				id: "lights",
 				type: "circle",

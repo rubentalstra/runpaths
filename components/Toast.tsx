@@ -4,11 +4,22 @@ import { useEffect } from "react";
 import type { Toast as ToastType } from "@/app/lib/types";
 import { cn } from "@/app/lib/utils";
 
+/**
+ * Props for the Toast component.
+ */
 interface ToastProps {
 	readonly toast: ToastType;
 	readonly onClose: () => void;
 }
 
+/**
+ * Individual toast notification.
+ *
+ * Displays a notification message with automatic dismissal after duration.
+ * Supports different types (success, error, info, warning) with color-coded styling.
+ *
+ * @param props - Component properties
+ */
 function Toast({ toast, onClose }: ToastProps) {
 	useEffect(() => {
 		if (toast.duration && toast.duration > 0) {
@@ -46,11 +57,21 @@ function Toast({ toast, onClose }: ToastProps) {
 	);
 }
 
+/**
+ * Props for the ToastContainer component.
+ */
 interface ToastContainerProps {
 	readonly toasts: readonly ToastType[];
 	readonly removeToast: (id: string) => void;
 }
 
+/**
+ * Container for displaying multiple toast notifications.
+ *
+ * Renders a stack of toast notifications in the top-right corner.
+ *
+ * @param props - Component properties
+ */
 export function ToastContainer({ toasts, removeToast }: ToastContainerProps) {
 	if (toasts.length === 0) return null;
 

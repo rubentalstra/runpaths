@@ -17,6 +17,9 @@ import {
 } from "../lib/constants";
 import { clamp } from "../lib/utils";
 
+/**
+ * Return type for usePreferences hook.
+ */
 interface UsePreferencesReturn {
 	preferences: Preferences;
 	updateDistance: (km: number) => void;
@@ -27,6 +30,14 @@ interface UsePreferencesReturn {
 	resetToDefaults: () => void;
 }
 
+/**
+ * Hook for managing user preferences.
+ *
+ * Provides state and update functions for all user preferences
+ * with automatic clamping to valid ranges.
+ *
+ * @returns Preferences state and update functions
+ */
 export function usePreferences(): UsePreferencesReturn {
 	const [preferences, setPreferences] = useState<Preferences>({
 		distanceMeters: DEFAULT_DISTANCE_KM * 1000,

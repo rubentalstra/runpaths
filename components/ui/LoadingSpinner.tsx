@@ -1,10 +1,20 @@
 import { cn } from "@/app/lib/utils";
 
+/**
+ * Props for the LoadingSpinner component.
+ */
 interface LoadingSpinnerProps {
 	readonly size?: "sm" | "md" | "lg";
 	readonly className?: string;
 }
 
+/**
+ * Loading spinner component for async operations.
+ *
+ * Displays an animated circular spinner with configurable size.
+ *
+ * @param props - Component properties
+ */
 export function LoadingSpinner({
 	size = "md",
 	className,

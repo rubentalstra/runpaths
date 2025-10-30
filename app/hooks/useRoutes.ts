@@ -5,6 +5,9 @@ import { useDebounce } from "use-debounce";
 import type { RouteSummary, Preferences, Coordinate } from "../lib/types";
 import { findRoutes } from "../actions";
 
+/**
+ * Return type for useRoutes hook.
+ */
 interface UseRoutesReturn {
 	routes: RouteSummary[];
 	activeRoute: number | null;
@@ -19,13 +22,20 @@ interface UseRoutesReturn {
 	clearError: () => void;
 }
 
+/**
+ * Hook for managing route generation and selection.
+ *
+ * Handles route generation with race condition prevention, debouncing,
+ * and provides methods for route management and error handling.
+ *
+ * @returns Route state and control functions
+ */
 export function useRoutes(): UseRoutesReturn {
 	const [routes, setRoutes] = useState<RouteSummary[]>([]);
 	const [activeRoute, setActiveRoute] = useState<number | null>(null);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
-	// Track the current request to prevent race conditions
 	const currentRequestRef = useRef<symbol | null>(null);
 
 	const clearRoutes = useCallback(() => {
@@ -40,7 +50,6 @@ export function useRoutes(): UseRoutesReturn {
 
 	const generateRoutes = useCallback(
 		async (start: Coordinate, preferences: Preferences) => {
-			// Create a unique request ID to handle race conditions
 			const requestId = Symbol("route-request");
 			currentRequestRef.current = requestId;
 
@@ -50,13 +59,11 @@ export function useRoutes(): UseRoutesReturn {
 			try {
 				const result = await findRoutes(start, preferences);
 
-				// Check if this is still the current request
 				if (currentRequestRef.current === requestId) {
 					setRoutes(result.routes);
 					setActiveRoute(result.routes.length > 0 ? 0 : null);
 				}
 			} catch (err) {
-				// Only set error if this is still the current request
 				if (currentRequestRef.current === requestId) {
 					const errorMessage =
 						err instanceof Error ? err.message : "Failed to generate routes";
@@ -65,7 +72,6 @@ export function useRoutes(): UseRoutesReturn {
 					setActiveRoute(null);
 				}
 			} finally {
-				// Only set loading to false if this is still the current request
 				if (currentRequestRef.current === requestId) {
 					setIsLoading(false);
 				}
@@ -74,7 +80,6 @@ export function useRoutes(): UseRoutesReturn {
 		[],
 	);
 
-	// Debounced version for rapid preference changes
 	const [debouncedGenerateRoutes] = useDebounce(generateRoutes, 500);
 
 	const handleSetActiveRoute = useCallback(
