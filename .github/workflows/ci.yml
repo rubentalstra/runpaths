@@ -48,3 +48,5 @@ jobs:
                   commit-message: "Update coverage badges [skip ci]"
                   output-folder: ./badges
                   badges-icon: jest
+                  commit-user: github-actions[bot]
+                  commit-user-email: github-actions[bot]@users.noreply.github.com
