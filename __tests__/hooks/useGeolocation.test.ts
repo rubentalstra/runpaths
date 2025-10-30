@@ -161,30 +161,28 @@ describe("useGeolocation", () => {
 
 	it("should clear error", async () => {
 		let callCount = 0;
-		mockGeolocation.getCurrentPosition.mockImplementation(
-			(success, error) => {
-				if (callCount === 0) {
-					callCount++;
-					error({
-						code: 1,
-						message: "Denied",
-						PERMISSION_DENIED: 1,
-						POSITION_UNAVAILABLE: 2,
-						TIMEOUT: 3,
-					});
-				} else {
-					// Second call after clearError should succeed
-					success({
-						coords: {
-							latitude: 52.3676,
-							longitude: 4.9041,
-							accuracy: 10,
-						},
-						timestamp: Date.now(),
-					});
-				}
-			},
-		);
+		mockGeolocation.getCurrentPosition.mockImplementation((success, error) => {
+			if (callCount === 0) {
+				callCount++;
+				error({
+					code: 1,
+					message: "Denied",
+					PERMISSION_DENIED: 1,
+					POSITION_UNAVAILABLE: 2,
+					TIMEOUT: 3,
+				});
+			} else {
+				// Second call after clearError should succeed
+				success({
+					coords: {
+						latitude: 52.3676,
+						longitude: 4.9041,
+						accuracy: 10,
+					},
+					timestamp: Date.now(),
+				});
+			}
+		});
 
 		const { result } = renderHook(() => useGeolocation());
 
@@ -198,7 +196,7 @@ describe("useGeolocation", () => {
 		});
 
 		expect(result.current.error).toBeNull();
-		
+
 		// The hook automatically requests location again after clearing error (state goes from "denied" -> "idle" -> "loading" -> "success")
 		await waitFor(() => {
 			expect(result.current.state).toBe("success");

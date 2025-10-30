@@ -105,18 +105,18 @@ The application will be available at
 
 ## 📦 Available Scripts
 
-| Command              | Description                           |
-| -------------------- | ------------------------------------- |
-| `npm run dev`        | Start development server on port 3000 |
-| `npm run build`      | Build the production application      |
-| `npm run start`      | Start the production server           |
-| `npm run lint`       | Check for linting errors              |
-| `npm run lint:fix`   | Automatically fix linting errors      |
-| `npm run type-check` | Run TypeScript type checking          |
-| `npm run clean`      | Clean build artifacts and cache       |
-| `npm test`           | Run test suite                        |
-| `npm run test:watch` | Run tests in watch mode               |
-| `npm run test:coverage` | Run tests with coverage report     |
+| Command                 | Description                           |
+| ----------------------- | ------------------------------------- |
+| `npm run dev`           | Start development server on port 3000 |
+| `npm run build`         | Build the production application      |
+| `npm run start`         | Start the production server           |
+| `npm run lint`          | Check for linting errors              |
+| `npm run lint:fix`      | Automatically fix linting errors      |
+| `npm run type-check`    | Run TypeScript type checking          |
+| `npm run clean`         | Clean build artifacts and cache       |
+| `npm test`              | Run test suite                        |
+| `npm run test:watch`    | Run tests in watch mode               |
+| `npm run test:coverage` | Run tests with coverage report        |
 
 ## 🎮 How to Use
 
