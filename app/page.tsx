@@ -1,13 +1,6 @@
 "use client";
 
-import {
-	useId,
-	useCallback,
-	useMemo,
-	Suspense,
-	useState,
-	useEffect,
-} from "react";
+import { useId, useCallback, useMemo, Suspense, useState } from "react";
 import type { Coordinate } from "ors-client";
 import { ErrorBoundary } from "react-error-boundary";
 
@@ -29,7 +22,6 @@ import { FEATURES, ROUTE_COLORS } from "./lib/constants";
  */
 function HomePage() {
 	const mapId = useId();
-	const [isMounted, setIsMounted] = useState(false);
 	const [manualCoordinate, setManualCoordinate] = useState<Coordinate | null>(
 		null,
 	);
@@ -54,15 +46,10 @@ function HomePage() {
 		updateColorblindMode,
 	} = usePreferences();
 
-	useEffect(() => {
-		setIsMounted(true);
-	}, []);
-
 	const currentCoordinate = manualCoordinate || location?.coordinate || null;
 
 	const showCitySearch =
-		isMounted &&
-		(!isSupported || locationState === "denied" || locationState === "error");
+		!isSupported || locationState === "denied" || locationState === "error";
 
 	const handleFindRoutes = useCallback(async () => {
 		if (!currentCoordinate) {
