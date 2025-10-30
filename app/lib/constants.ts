@@ -28,10 +28,9 @@ export const QUICK_DISTANCES = [3, 5, 10, 15] as const;
 export const DISTANCE_PENALTY_WEIGHT = 40;
 export const LIGHTS_PENALTY_WEIGHT = 25;
 export const PARKS_BONUS_WEIGHT = 25;
-export const BASELINE_SCORE = 10;
 
 export const SEEDS = [11, 22, 33, 44, 55] as const;
-export const MAX_ROUTES = 3;
+export const MAX_ROUTES = 4;
 
 export const LIGHTS_NEAR_DISTANCE_METERS = 20;
 export const MAX_LIGHTS_FOR_PENALTY = 20;

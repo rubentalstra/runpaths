@@ -25,7 +25,6 @@ import {
 	DISTANCE_PENALTY_WEIGHT,
 	LIGHTS_PENALTY_WEIGHT,
 	PARKS_BONUS_WEIGHT,
-	BASELINE_SCORE,
 	MAX_LIGHTS_FOR_PENALTY,
 	FEATURES,
 } from "./lib/constants";
@@ -131,13 +130,13 @@ export async function findRoutes(
 			}
 
 			const target = preferences.distanceMeters;
-			const distancePenalty = Math.min(
-				1,
-				Math.abs(distance - target) / Math.max(1, target),
-			);
+			const distanceDiff = Math.abs(distance - target);
+			const distancePenaltyRatio = distanceDiff / Math.max(1, target);
+			const distancePenalty = Math.min(1, distancePenaltyRatio * 5);
 
-			let score =
-				100 - DISTANCE_PENALTY_WEIGHT * distancePenalty + BASELINE_SCORE;
+			let score = 100;
+
+			score -= DISTANCE_PENALTY_WEIGHT * distancePenalty;
 
 			if (FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK) {
 				score -=
