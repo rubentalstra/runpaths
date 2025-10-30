@@ -15,6 +15,7 @@ const config: Config = {
 	collectCoverage: true,
 	coverageDirectory: "coverage",
 	coverageProvider: "v8",
+	coverageReporters: ["json-summary", "text", "lcov"],
 	testEnvironment: "jsdom",
 
 	setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],

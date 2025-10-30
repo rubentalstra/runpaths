@@ -26,7 +26,7 @@ jobs:
             - name: Build application
               run: npm run build
               env:
-                  ORS_API_KEY: ${{ secrets.ORS_API_KEY || 'test-key' }}
+                  ORS_API_KEY: ${{ secrets.ORS_API_KEY }}
 
             - name: Comment PR with preview info
               uses: actions/github-script@v8

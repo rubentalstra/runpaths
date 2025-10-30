@@ -9,7 +9,12 @@ distance.
 ![React](https://img.shields.io/badge/React-19.2-blue?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1-38bdf8?style=flat-square&logo=tailwindcss)
-![Coverage](https://raw.githubusercontent.com/rubentalstra/runpaths/main/badges/coverage.svg)
+
+![Coverage Total](./badges/coverage-total.svg)
+![Coverage Branches](./badges/coverage-branches.svg)
+![Coverage Functions](./badges/coverage-functions.svg)
+![Coverage Lines](./badges/coverage-lines.svg)
+![Coverage Statements](./badges/coverage-statements.svg)
 
 ## ✨ Features
 
