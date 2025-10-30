@@ -7,6 +7,9 @@
 
 # testing
 /coverage
+# Keep coverage badge
+!/badges/coverage.svg
+!/badges/coverage-summary.json
 
 # next.js
 /.next/

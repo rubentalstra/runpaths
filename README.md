@@ -9,6 +9,7 @@ distance.
 ![React](https://img.shields.io/badge/React-19.2-blue?style=flat-square&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?style=flat-square&logo=typescript)
 ![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.1-38bdf8?style=flat-square&logo=tailwindcss)
+![Coverage](https://raw.githubusercontent.com/rubentalstra/runpaths/main/badges/coverage.svg)
 
 ## ✨ Features
 
@@ -113,6 +114,9 @@ The application will be available at
 | `npm run lint:fix`   | Automatically fix linting errors      |
 | `npm run type-check` | Run TypeScript type checking          |
 | `npm run clean`      | Clean build artifacts and cache       |
+| `npm test`           | Run test suite                        |
+| `npm run test:watch` | Run tests in watch mode               |
+| `npm run test:coverage` | Run tests with coverage report     |
 
 ## 🎮 How to Use
 
