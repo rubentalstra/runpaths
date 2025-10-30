@@ -134,9 +134,12 @@ export async function findRoutes(
 			const distancePenaltyRatio = distanceDiff / Math.max(1, target);
 			const distancePenalty = Math.min(1, distancePenaltyRatio * 5);
 
+			const routeQuality = calculateRouteQuality(lineGeom);
+
 			let score = 100;
 
 			score -= DISTANCE_PENALTY_WEIGHT * distancePenalty;
+			score -= 30 * (1 - routeQuality);
 
 			if (FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK) {
 				score -=
@@ -243,6 +246,59 @@ async function orsRoundTrip(
 		console.error("ORS round trip error:", error);
 		throw error;
 	}
+}
+
+/**
+ * Calculates the quality of a route based on its shape and smoothness.
+ *
+ * Analyzes the route for sharp turns, backtracking, and overall flow.
+ * Returns a score from 0 to 1, where 1 is the best quality.
+ *
+ * @param lineGeom - Route geometry as GeoJSON LineString
+ * @returns Quality score from 0 to 1
+ */
+function calculateRouteQuality(lineGeom: GeoJSON.LineString): number {
+	const coords = lineGeom.coordinates;
+	if (coords.length < 3) return 1;
+
+	let sharpTurns = 0;
+	let totalTurns = 0;
+	let backtracking = 0;
+
+	for (let i = 1; i < coords.length - 1; i++) {
+		const bearing1 = turf.bearing(coords[i - 1], coords[i]);
+		const bearing2 = turf.bearing(coords[i], coords[i + 1]);
+
+		let angleDiff = Math.abs(bearing2 - bearing1);
+		if (angleDiff > 180) {
+			angleDiff = 360 - angleDiff;
+		}
+
+		totalTurns++;
+
+		if (angleDiff > 120) {
+			sharpTurns += 2;
+		} else if (angleDiff > 90) {
+			sharpTurns += 1;
+		}
+
+		if (angleDiff > 150) {
+			backtracking++;
+		}
+	}
+
+	const sharpTurnRatio = totalTurns > 0 ? sharpTurns / totalTurns : 0;
+	const backtrackRatio = totalTurns > 0 ? backtracking / totalTurns : 0;
+
+	const segmentCount = coords.length - 1;
+	const segmentPenalty = Math.max(0, (segmentCount - 50) / 200);
+
+	let quality = 1.0;
+	quality -= Math.min(0.5, sharpTurnRatio * 0.8);
+	quality -= Math.min(0.3, backtrackRatio * 1.2);
+	quality -= Math.min(0.2, segmentPenalty);
+
+	return Math.max(0, Math.min(1, quality));
 }
 
 /**
