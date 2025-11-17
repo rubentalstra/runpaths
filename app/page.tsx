@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, Suspense, useState } from "react";
+import { useCallback, useMemo, Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import type { Coordinate } from "ors-client";
 import { ErrorBoundary } from "react-error-boundary";
@@ -8,21 +8,27 @@ import { ErrorBoundary } from "react-error-boundary";
 import { useGeolocation, useToast, useRoutes, usePreferences } from "./hooks";
 import { MapComponent } from "@/components/Map";
 import { RouteStats } from "@/components/RouteStats";
-import { CitySearch } from "@/components/CitySearch";
 import { ToastContainer } from "@/components/Toast";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorFallback } from "@/components/ui/ErrorFallback";
 import { FEATURES, ROUTE_COLORS } from "./lib/constants";
 
-// Load Controls with no SSR to avoid hydration issues
+// Load interactive components with no SSR to avoid hydration issues
 const Controls = dynamic(
 	() =>
 		import("@/components/Controls").then((mod) => ({ default: mod.Controls })),
 	{
 		ssr: false,
-		loading: () => (
-			<div className="fixed left-4 top-1/2 -translate-y-1/2 w-[360px] max-w-[90vw] z-20 panel p-4 space-y-4 animate-pulse" />
-		),
+	},
+);
+
+const CitySearch = dynamic(
+	() =>
+		import("@/components/CitySearch").then((mod) => ({
+			default: mod.CitySearch,
+		})),
+	{
+		ssr: false,
 	},
 );
 
@@ -38,6 +44,12 @@ function HomePage() {
 	const [manualCoordinate, setManualCoordinate] = useState<Coordinate | null>(
 		null,
 	);
+	const [isMounted, setIsMounted] = useState(false);
+
+	// Ensure component only renders on client
+	useEffect(() => {
+		setIsMounted(true);
+	}, []);
 
 	const { location, state: locationState, isSupported } = useGeolocation();
 	const { toasts, addToast, removeToast } = useToast();
@@ -150,6 +162,15 @@ function HomePage() {
 		}
 		return 'Click the map to set your start location, then "Find routes".';
 	}, [locationState, currentCoordinate, manualCoordinate]);
+
+	// Prevent hydration mismatch by not rendering dynamic content until mounted
+	if (!isMounted) {
+		return (
+			<div className="h-screen w-screen relative bg-neutral-50">
+				<LoadingSpinner />
+			</div>
+		);
+	}
 
 	return (
 		<div className="h-screen w-screen relative bg-neutral-50">
