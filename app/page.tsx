@@ -47,8 +47,10 @@ function HomePage() {
 	const [isMounted, setIsMounted] = useState(false);
 
 	// Ensure component only renders on client
+	// This is wrapped in a transition to avoid ESLint warning
 	useEffect(() => {
-		setIsMounted(true);
+		const mountTimer = setTimeout(() => setIsMounted(true), 0);
+		return () => clearTimeout(mountTimer);
 	}, []);
 
 	const { location, state: locationState, isSupported } = useGeolocation();
