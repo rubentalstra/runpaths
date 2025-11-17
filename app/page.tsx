@@ -1,18 +1,30 @@
 "use client";
 
-import { useId, useCallback, useMemo, Suspense, useState } from "react";
+import { useCallback, useMemo, Suspense, useState } from "react";
+import dynamic from "next/dynamic";
 import type { Coordinate } from "ors-client";
 import { ErrorBoundary } from "react-error-boundary";
 
 import { useGeolocation, useToast, useRoutes, usePreferences } from "./hooks";
 import { MapComponent } from "@/components/Map";
-import { Controls } from "@/components/Controls";
 import { RouteStats } from "@/components/RouteStats";
 import { CitySearch } from "@/components/CitySearch";
 import { ToastContainer } from "@/components/Toast";
 import { LoadingSpinner } from "@/components/ui/LoadingSpinner";
 import { ErrorFallback } from "@/components/ui/ErrorFallback";
 import { FEATURES, ROUTE_COLORS } from "./lib/constants";
+
+// Load Controls with no SSR to avoid hydration issues
+const Controls = dynamic(
+	() =>
+		import("@/components/Controls").then((mod) => ({ default: mod.Controls })),
+	{
+		ssr: false,
+		loading: () => (
+			<div className="fixed left-4 top-1/2 -translate-y-1/2 w-[360px] max-w-[90vw] z-20 panel p-4 space-y-4 animate-pulse" />
+		),
+	},
+);
 
 /**
  * Main application component for the RunPaths route finder.
@@ -21,7 +33,8 @@ import { FEATURES, ROUTE_COLORS } from "./lib/constants";
  * and displays the map with generated running routes.
  */
 function HomePage() {
-	const mapId = useId();
+	// Use static ID since this component is only rendered once
+	const mapId = "homepage-map";
 	const [manualCoordinate, setManualCoordinate] = useState<Coordinate | null>(
 		null,
 	);

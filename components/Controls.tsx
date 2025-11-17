@@ -1,6 +1,5 @@
 "use client";
 
-import { useId } from "react";
 import { cn } from "@/app/lib/utils";
 import {
 	MIN_DISTANCE_KM,
@@ -56,11 +55,12 @@ export function Controls({
 	onFindRoutes,
 	isPending,
 }: ControlsProps) {
-	const distanceId = useId();
-	const avoidId = useId();
-	const preferId = useId();
-	const paceId = useId();
-	const colorblindId = useId();
+	// Use static IDs since this component is only rendered once
+	const distanceId = "controls-distance";
+	const avoidId = "controls-avoid";
+	const preferId = "controls-prefer";
+	const paceId = "controls-pace";
+	const colorblindId = "controls-colorblind";
 
 	const formatPace = (minPerKm: number): string => {
 		const minutes = Math.floor(minPerKm);
