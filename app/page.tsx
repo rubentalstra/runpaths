@@ -191,7 +191,7 @@ function HomePage() {
 
 			<div className="fixed top-4 left-1/2 -translate-x-1/2 z-20 px-4 py-2 panel flex items-center gap-3 max-w-[90vw]">
 				<div className="font-semibold text-brand">RunPaths</div>
-				<span className="text-sm text-neutral-600 truncate">
+				<span className="hidden md:inline text-sm text-neutral-600 truncate">
 					{statusMessage}
 				</span>
 				{manualCoordinate && location?.coordinate && (
@@ -201,7 +201,8 @@ function HomePage() {
 						className="ml-auto px-3 py-1 text-xs rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition-colors font-medium whitespace-nowrap"
 						aria-label="Reset to current location"
 					>
-						Reset to my location
+						<span className="hidden md:inline">Reset to my location</span>
+						<span className="md:hidden">Reset</span>
 					</button>
 				)}
 			</div>
@@ -240,7 +241,7 @@ function HomePage() {
 						paceMinPerKm={preferences.paceMinPerKm}
 					/>
 
-					<div className="fixed bottom-24 right-4 z-20 panel px-3 py-2 text-xs space-y-1">
+					<div className="hidden md:block fixed bottom-24 right-4 z-20 panel px-3 py-2 text-xs space-y-1">
 						<div className="font-semibold text-neutral-700 mb-1">Legend</div>
 						<div className="flex items-center gap-2">
 							<div

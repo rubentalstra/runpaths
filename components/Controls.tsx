@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { cn } from "@/app/lib/utils";
 import {
 	MIN_DISTANCE_KM,
@@ -55,6 +56,8 @@ export function Controls({
 	onFindRoutes,
 	isPending,
 }: ControlsProps) {
+	const [isOpen, setIsOpen] = useState(false);
+
 	// Use static IDs since this component is only rendered once
 	const distanceId = "controls-distance";
 	const avoidId = "controls-avoid";
@@ -69,165 +72,207 @@ export function Controls({
 	};
 
 	return (
-		<div className="fixed left-4 top-1/2 -translate-y-1/2 w-[360px] max-w-[90vw] z-20 panel p-4 space-y-4">
-			<h2 className="text-lg font-semibold text-brand">Plan your Run</h2>
-
-			<div className="space-y-1">
-				<label htmlFor={distanceId} className="text-sm font-medium block">
-					Target distance: <span className="text-brand-accent">{kms} km</span>
-				</label>
-				<input
-					id={distanceId}
-					type="range"
-					min={MIN_DISTANCE_KM}
-					max={MAX_DISTANCE_KM}
-					step={DISTANCE_STEP}
-					value={kms}
-					onChange={(e) => setKms(Number(e.target.value))}
-					className="w-full"
-					aria-label={`Distance: ${kms} kilometers`}
-				/>
-				<div className="flex gap-2">
-					{QUICK_DISTANCES.map((k) => (
-						<button
-							key={k}
-							type="button"
-							onClick={() => setKms(k)}
-							className={cn(
-								"px-3 py-1 rounded-full border text-sm transition-colors font-semibold",
-								kms === k
-									? "bg-brand-accent text-brand-dark border-brand-accent shadow-sm"
-									: "bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-50 hover:border-neutral-400",
-							)}
-							aria-label={`Set distance to ${k} kilometers`}
-						>
-							{k}k
-						</button>
-					))}
-				</div>
-			</div>
-
-			{FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK && (
-				<div className="space-y-2">
-					<div className="flex justify-between">
-						<label htmlFor={avoidId} className="text-sm font-medium">
-							Avoid traffic lights
-						</label>
-						<span className="text-sm text-neutral-600">
-							{Math.round(avoidLights * 100)}%
-						</span>
-					</div>
-					<input
-						id={avoidId}
-						type="range"
-						min={MIN_PREFERENCE}
-						max={MAX_PREFERENCE}
-						step={PREFERENCE_STEP}
-						value={avoidLights}
-						onChange={(e) => setAvoidLights(Number(e.target.value))}
-						className="w-full"
-						aria-label={`Avoid traffic lights: ${Math.round(avoidLights * 100)} percent`}
-					/>
-				</div>
-			)}
-
-			{FEATURES.ENABLE_PARK_ADJACENCY_CHECK && (
-				<div className="space-y-2">
-					<div className="flex justify-between">
-						<label htmlFor={preferId} className="text-sm font-medium">
-							Prefer parks
-						</label>
-						<span className="text-sm text-neutral-600">
-							{Math.round(preferParks * 100)}%
-						</span>
-					</div>
-					<input
-						id={preferId}
-						type="range"
-						min={MIN_PREFERENCE}
-						max={MAX_PREFERENCE}
-						step={PREFERENCE_STEP}
-						value={preferParks}
-						onChange={(e) => setPreferParks(Number(e.target.value))}
-						className="w-full"
-						aria-label={`Prefer parks: ${Math.round(preferParks * 100)} percent`}
-					/>
-				</div>
-			)}
-
-			<div className="space-y-2">
-				<div className="flex justify-between">
-					<label htmlFor={paceId} className="text-sm font-medium">
-						Running pace
-					</label>
-					<span className="text-sm text-neutral-600">
-						{formatPace(pace)} min/km
-					</span>
-				</div>
-				<input
-					id={paceId}
-					type="range"
-					min={MIN_PACE_MIN_PER_KM}
-					max={MAX_PACE_MIN_PER_KM}
-					step={PACE_STEP}
-					value={pace}
-					onChange={(e) => setPace(Number(e.target.value))}
-					className="w-full"
-					aria-label={`Running pace: ${formatPace(pace)} minutes per kilometer`}
-				/>
-				<div className="text-xs text-neutral-500">
-					Faster runners: 3-5 min/km • Casual joggers: 6-8 min/km
-				</div>
-			</div>
-
-			<div className="space-y-2 pt-2 border-t border-neutral-200">
-				<div className="flex items-center justify-between">
-					<label htmlFor={colorblindId} className="text-sm font-medium">
-						Colorblind-friendly mode
-					</label>
-					<button
-						id={colorblindId}
-						type="button"
-						role="switch"
-						aria-checked={colorblindMode}
-						onClick={() => setColorblindMode(!colorblindMode)}
-						className={cn(
-							"relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
-							colorblindMode ? "bg-blue-600" : "bg-neutral-300",
-						)}
-					>
-						<span
-							className={cn(
-								"inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
-								colorblindMode ? "translate-x-6" : "translate-x-1",
-							)}
-						/>
-					</button>
-				</div>
-				<div className="text-xs text-neutral-500">
-					Uses blue/orange colors safer for color vision deficiencies
-				</div>
-			</div>
-
+		<>
+			{/* Mobile toggle button - only visible on mobile */}
 			<button
 				type="button"
-				onClick={onFindRoutes}
-				disabled={isPending}
-				className={cn(
-					"w-full rounded-xl py-3 transition-colors font-bold shadow-md",
-					isPending
-						? "bg-neutral-300 text-neutral-500 cursor-not-allowed"
-						: "bg-blue-500 text-white hover:bg-blue-600 active:scale-[0.98]",
-				)}
-				aria-label="Find running routes"
+				onClick={() => setIsOpen(!isOpen)}
+				className="md:hidden fixed left-4 top-4 z-30 bg-white rounded-full p-3 shadow-lg border border-neutral-200 hover:bg-neutral-50 transition-colors"
+				aria-label={isOpen ? "Close menu" : "Open menu"}
 			>
-				{isPending ? "Finding routes..." : "Find routes"}
+				<svg
+					width="24"
+					height="24"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					strokeWidth="2"
+					strokeLinecap="round"
+					strokeLinejoin="round"
+				>
+					<title>{isOpen ? "Close" : "Menu"}</title>
+					{isOpen ? (
+						<>
+							<line x1="18" y1="6" x2="6" y2="18" />
+							<line x1="6" y1="6" x2="18" y2="18" />
+						</>
+					) : (
+						<>
+							<line x1="3" y1="12" x2="21" y2="12" />
+							<line x1="3" y1="6" x2="21" y2="6" />
+							<line x1="3" y1="18" x2="21" y2="18" />
+						</>
+					)}
+				</svg>
 			</button>
 
-			<div className="text-xs text-neutral-500 leading-relaxed">
-				Tiles &copy; OpenStreetMap contributors. Routing by OpenRouteService.
-				Data via Overpass API.
+			{/* Sidebar - always visible on desktop, collapsible on mobile */}
+			<div
+				className={cn(
+					"fixed left-4 top-1/2 -translate-y-1/2 w-[360px] max-w-[90vw] z-20 panel p-4 space-y-4 transition-transform duration-300",
+					"md:translate-x-0",
+					!isOpen && "max-md:-translate-x-[calc(100%+2rem)]",
+				)}
+			>
+				<h2 className="text-lg font-semibold text-brand">Plan your Run</h2>
+
+				<div className="space-y-1">
+					<label htmlFor={distanceId} className="text-sm font-medium block">
+						Target distance: <span className="text-brand-accent">{kms} km</span>
+					</label>
+					<input
+						id={distanceId}
+						type="range"
+						min={MIN_DISTANCE_KM}
+						max={MAX_DISTANCE_KM}
+						step={DISTANCE_STEP}
+						value={kms}
+						onChange={(e) => setKms(Number(e.target.value))}
+						className="w-full"
+						aria-label={`Distance: ${kms} kilometers`}
+					/>
+					<div className="flex gap-2">
+						{QUICK_DISTANCES.map((k) => (
+							<button
+								key={k}
+								type="button"
+								onClick={() => setKms(k)}
+								className={cn(
+									"px-3 py-1 rounded-full border text-sm transition-colors font-semibold",
+									kms === k
+										? "bg-brand-accent text-brand-dark border-brand-accent shadow-sm"
+										: "bg-white border-neutral-300 text-neutral-700 hover:bg-neutral-50 hover:border-neutral-400",
+								)}
+								aria-label={`Set distance to ${k} kilometers`}
+							>
+								{k}k
+							</button>
+						))}
+					</div>
+				</div>
+
+				{FEATURES.ENABLE_TRAFFIC_LIGHTS_CHECK && (
+					<div className="space-y-2">
+						<div className="flex justify-between">
+							<label htmlFor={avoidId} className="text-sm font-medium">
+								Avoid traffic lights
+							</label>
+							<span className="text-sm text-neutral-600">
+								{Math.round(avoidLights * 100)}%
+							</span>
+						</div>
+						<input
+							id={avoidId}
+							type="range"
+							min={MIN_PREFERENCE}
+							max={MAX_PREFERENCE}
+							step={PREFERENCE_STEP}
+							value={avoidLights}
+							onChange={(e) => setAvoidLights(Number(e.target.value))}
+							className="w-full"
+							aria-label={`Avoid traffic lights: ${Math.round(avoidLights * 100)} percent`}
+						/>
+					</div>
+				)}
+
+				{FEATURES.ENABLE_PARK_ADJACENCY_CHECK && (
+					<div className="space-y-2">
+						<div className="flex justify-between">
+							<label htmlFor={preferId} className="text-sm font-medium">
+								Prefer parks
+							</label>
+							<span className="text-sm text-neutral-600">
+								{Math.round(preferParks * 100)}%
+							</span>
+						</div>
+						<input
+							id={preferId}
+							type="range"
+							min={MIN_PREFERENCE}
+							max={MAX_PREFERENCE}
+							step={PREFERENCE_STEP}
+							value={preferParks}
+							onChange={(e) => setPreferParks(Number(e.target.value))}
+							className="w-full"
+							aria-label={`Prefer parks: ${Math.round(preferParks * 100)} percent`}
+						/>
+					</div>
+				)}
+
+				<div className="space-y-2">
+					<div className="flex justify-between">
+						<label htmlFor={paceId} className="text-sm font-medium">
+							Running pace
+						</label>
+						<span className="text-sm text-neutral-600">
+							{formatPace(pace)} min/km
+						</span>
+					</div>
+					<input
+						id={paceId}
+						type="range"
+						min={MIN_PACE_MIN_PER_KM}
+						max={MAX_PACE_MIN_PER_KM}
+						step={PACE_STEP}
+						value={pace}
+						onChange={(e) => setPace(Number(e.target.value))}
+						className="w-full"
+						aria-label={`Running pace: ${formatPace(pace)} minutes per kilometer`}
+					/>
+					<div className="text-xs text-neutral-500">
+						Faster runners: 3-5 min/km • Casual joggers: 6-8 min/km
+					</div>
+				</div>
+
+				<div className="space-y-2 pt-2 border-t border-neutral-200">
+					<div className="flex items-center justify-between">
+						<label htmlFor={colorblindId} className="text-sm font-medium">
+							Colorblind-friendly mode
+						</label>
+						<button
+							id={colorblindId}
+							type="button"
+							role="switch"
+							aria-checked={colorblindMode}
+							onClick={() => setColorblindMode(!colorblindMode)}
+							className={cn(
+								"relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2",
+								colorblindMode ? "bg-blue-600" : "bg-neutral-300",
+							)}
+						>
+							<span
+								className={cn(
+									"inline-block h-4 w-4 transform rounded-full bg-white transition-transform",
+									colorblindMode ? "translate-x-6" : "translate-x-1",
+								)}
+							/>
+						</button>
+					</div>
+					<div className="text-xs text-neutral-500">
+						Uses blue/orange colors safer for color vision deficiencies
+					</div>
+				</div>
+
+				<button
+					type="button"
+					onClick={onFindRoutes}
+					disabled={isPending}
+					className={cn(
+						"w-full rounded-xl py-3 transition-colors font-bold shadow-md",
+						isPending
+							? "bg-neutral-300 text-neutral-500 cursor-not-allowed"
+							: "bg-blue-500 text-white hover:bg-blue-600 active:scale-[0.98]",
+					)}
+					aria-label="Find running routes"
+				>
+					{isPending ? "Finding routes..." : "Find routes"}
+				</button>
+
+				<div className="text-xs text-neutral-500 leading-relaxed">
+					Tiles &copy; OpenStreetMap contributors. Routing by OpenRouteService.
+					Data via Overpass API.
+				</div>
 			</div>
-		</div>
+		</>
 	);
 }

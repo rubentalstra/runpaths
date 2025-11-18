@@ -25,6 +25,7 @@ export function CitySearch({ onCitySelect, isVisible }: CitySearchProps) {
 	const [query, setQuery] = useState("");
 	const [results, setResults] = useState<NominatimResult[]>([]);
 	const [isSearching, setIsSearching] = useState(false);
+	const [isOpen, setIsOpen] = useState(false);
 
 	async function searchCities(q: string) {
 		if (!q.trim()) {
@@ -74,61 +75,103 @@ export function CitySearch({ onCitySelect, isVisible }: CitySearchProps) {
 	if (!isVisible) return null;
 
 	return (
-		<div className="fixed top-16 left-1/2 -translate-x-1/2 z-20 w-96 max-w-[90vw]">
-			<div className="panel p-4 animate-slide-up">
-				<h3 className="font-semibold text-brand mb-3">Find your city</h3>
-				<form onSubmit={handleSubmit} className="mb-3">
-					<div className="flex gap-2">
-						<input
-							type="text"
-							value={query}
-							onChange={(e) => setQuery(e.target.value)}
-							placeholder="Enter city name..."
-							className="flex-1 px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-accent transition-all"
-							aria-label="City name"
-							autoComplete="off"
-						/>
-						<button
-							type="submit"
-							disabled={isSearching || !query.trim()}
-							className={cn(
-								"px-4 py-2 rounded-md transition-colors font-semibold shadow-sm",
-								isSearching || !query.trim()
-									? "bg-neutral-300 text-neutral-500 cursor-not-allowed"
-									: "bg-brand-accent text-brand-dark hover:bg-[#c79438]",
-							)}
-							aria-label="Search for city"
-						>
-							{isSearching ? "..." : "Search"}
-						</button>
-					</div>
-				</form>
-				{results.length > 0 && (
-					<div className="space-y-1 max-h-48 overflow-y-auto">
-						{results.map((result) => {
-							const cityName =
-								result.address.city ||
-								result.address.town ||
-								result.address.village ||
-								result.display_name.split(",")[0];
+		<>
+			{/* Mobile toggle button - only visible on mobile */}
+			<button
+				type="button"
+				onClick={() => setIsOpen(!isOpen)}
+				className="md:hidden fixed top-4 right-4 z-30 bg-white rounded-full p-3 shadow-lg border border-neutral-200 hover:bg-neutral-50 transition-colors"
+				aria-label={isOpen ? "Close search" : "Open search"}
+			>
+				<svg
+					width="24"
+					height="24"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					strokeWidth="2"
+					strokeLinecap="round"
+					strokeLinejoin="round"
+				>
+					<title>{isOpen ? "Close" : "Search"}</title>
+					{isOpen ? (
+						<>
+							<line x1="18" y1="6" x2="6" y2="18" />
+							<line x1="6" y1="6" x2="18" y2="18" />
+						</>
+					) : (
+						<>
+							<circle cx="11" cy="11" r="8" />
+							<line x1="21" y1="21" x2="16.65" y2="16.65" />
+						</>
+					)}
+				</svg>
+			</button>
 
-							return (
-								<button
-									key={result.place_id}
-									type="button"
-									onClick={() => handleCitySelect(result)}
-									className="w-full text-left p-2 rounded hover:bg-neutral-100 transition-colors"
-								>
-									<div className="font-medium">{cityName}</div>
-									<div className="text-sm text-neutral-600 truncate">
-										{result.display_name}
-									</div>
-								</button>
-							);
-						})}
-					</div>
+			{/* Search panel - always visible on desktop, collapsible on mobile */}
+			<div
+				className={cn(
+					"fixed top-16 left-1/2 -translate-x-1/2 z-20 w-96 max-w-[90vw] transition-all duration-300",
+					"md:opacity-100 md:translate-y-0",
+					!isOpen &&
+						"max-md:opacity-0 max-md:-translate-y-4 max-md:pointer-events-none",
 				)}
+			>
+				<div className="panel p-4 animate-slide-up">
+					<h3 className="font-semibold text-brand mb-3">Find your city</h3>
+					<form onSubmit={handleSubmit} className="mb-3">
+						<div className="flex gap-2">
+							<input
+								type="text"
+								value={query}
+								onChange={(e) => setQuery(e.target.value)}
+								placeholder="Enter city name..."
+								className="flex-1 px-3 py-2 border border-neutral-300 rounded-md focus:outline-none focus:ring-2 focus:ring-brand-accent transition-all"
+								aria-label="City name"
+								autoComplete="off"
+							/>
+							<button
+								type="submit"
+								disabled={isSearching || !query.trim()}
+								className={cn(
+									"px-4 py-2 rounded-md transition-colors font-semibold shadow-sm",
+									isSearching || !query.trim()
+										? "bg-neutral-300 text-neutral-500 cursor-not-allowed"
+										: "bg-brand-accent text-brand-dark hover:bg-[#c79438]",
+								)}
+								aria-label="Search for city"
+							>
+								{isSearching ? "..." : "Search"}
+							</button>
+						</div>
+					</form>
+					{results.length > 0 && (
+						<div className="space-y-1 max-h-48 overflow-y-auto">
+							{results.map((result) => {
+								const cityName =
+									result.address.city ||
+									result.address.town ||
+									result.address.village ||
+									result.display_name.split(",")[0];
+
+								return (
+									<button
+										key={result.place_id}
+										type="button"
+										onClick={() => handleCitySelect(result)}
+										className="w-full text-left p-2 rounded hover:bg-neutral-100 transition-colors"
+									>
+										<div className="font-medium">{cityName}</div>
+										<div className="text-sm text-neutral-600 truncate">
+											{result.display_name}
+										</div>
+									</button>
+								);
+							})}
+						</div>
+					)}
+				</div>
 			</div>
-		</div>
+		</>
 	);
 }
