@@ -18,6 +18,7 @@
   "dependencies": {
     "@tailwindcss/postcss": "^4.1.17",
     "@turf/turf": "^7.3.0",
+    "@vercel/speed-insights": "^1.2.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.23.24",
     "maplibre-gl": "^5.13.0",
