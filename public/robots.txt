@@ -1,0 +1,9 @@
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Explicitly allow OG image generation endpoint
+Allow: /api/og/
+
+# Sitemap
+Sitemap: https://runpaths.vercel.app/sitemap.xml

@@ -24,20 +24,30 @@ export const metadata: Metadata = {
 	],
 	authors: [{ name: "Ruben Talstra" }],
 	creator: "Ruben Talstra",
+	metadataBase: new URL("https://runpaths.vercel.app"),
 	openGraph: {
 		type: "website",
 		locale: "en_US",
-		url: "https://runpaths.app",
+		url: "https://runpaths.vercel.app",
 		title: "RunPaths - Find Beautiful Running Routes",
 		description:
 			"Discover scenic, low-traffic running loops near you. Avoid traffic lights and find park routes.",
 		siteName: "RunPaths",
+		images: [
+			{
+				url: "/api/og",
+				width: 1200,
+				height: 630,
+				alt: "RunPaths - Find Beautiful Running Routes",
+			},
+		],
 	},
 	twitter: {
 		card: "summary_large_image",
 		title: "RunPaths - Find Beautiful Running Routes",
 		description:
 			"Discover scenic, low-traffic running loops near you. Avoid traffic lights and find park routes.",
+		images: ["/api/og"],
 	},
 	robots: {
 		index: true,
