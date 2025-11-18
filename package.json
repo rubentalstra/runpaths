@@ -47,8 +47,7 @@
     "typescript": "^5.9.3"
   },
   "engines": {
-    "node": ">=20.0.0",
-    "npm": ">=10.0.0"
+    "node": "24.x"
   },
   "overrides": {
     "@types/react": "19.2.5",
